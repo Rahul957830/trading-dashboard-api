@@ -1,0 +1,62 @@
+name: Update Weekly Profit
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # every hour
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Fetch profit from Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: |
+          node <<'EOF'
+          import fs from "fs";
+
+          const res = await fetch(
+            `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${process.env.NOTION_TOKEN}`,
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json"
+              }
+            }
+          );
+
+          const data = await res.json();
+
+          let profit = 0;
+
+          for (const row of data.results) {
+            const val = row.properties["Weekly P&L"]?.number;
+            if (typeof val === "number") profit += val;
+          }
+
+          fs.writeFileSync(
+            "data/profit.json",
+            JSON.stringify({ weekly_profit: profit }, null, 2)
+          );
+          EOF
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/profit.json
+          git commit -m "Update weekly profit" || exit 0
+          git push
