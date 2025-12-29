@@ -2,8 +2,8 @@ name: Update Weekly Profit
 
 on:
   schedule:
-    - cron: "0 * * * *"   # runs every hour
-  workflow_dispatch:     # allows manual run
+    - cron: "0 * * * *"   # every hour
+  workflow_dispatch:
 
 jobs:
   update:
@@ -25,10 +25,6 @@ jobs:
         run: |
           node <<'EOF'
           const fs = require("fs");
-
-          // Dynamic import for fetch (safe in GitHub Actions)
-          const fetch = (...args) =>
-            import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
           (async () => {
             const response = await fetch(
@@ -64,7 +60,7 @@ jobs:
               JSON.stringify({ weekly_profit: weeklyProfit }, null, 2)
             );
 
-            console.log("Weekly profit updated:", weeklyProfit);
+            console.log("Weekly profit:", weeklyProfit);
           })().catch(err => {
             console.error(err);
             process.exit(1);
