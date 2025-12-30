@@ -1,23 +1,26 @@
-/* =========================
-   REAL-TIME TRADING ENGINE
-   Vercel Serverless Function
-========================= */
+/* =========================================================
+   TRADING DASHBOARD ENGINE (REAL-TIME)
+   Platform : Vercel Serverless (Node 18)
+========================================================= */
 
-// Node 18+ (Vercel) has global fetch — NO imports needed
+// Node 18+ provides global fetch (no node-fetch needed)
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-// Basic safety check
+// Fail fast if env vars are missing
 if (!NOTION_TOKEN || !DATABASE_ID) {
   throw new Error("Missing NOTION_TOKEN or NOTION_DATABASE_ID");
 }
 
-// Simple in-memory cache (reduces Notion API calls)
+/* =========================
+   SIMPLE CACHE
+========================= */
 let CACHE = {
   timestamp: 0,
   data: null
 };
+
 const CACHE_TTL = 60 * 1000; // 60 seconds
 
 /* =========================
@@ -26,11 +29,10 @@ const CACHE_TTL = 60 * 1000; // 60 seconds
 
 function normalizeDate(dateStr) {
   if (!dateStr) return null;
-
   const d = new Date(dateStr);
   if (isNaN(d)) return null;
 
-  // Normalize to local midnight (ignore time)
+  // Normalize to local midnight
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
@@ -41,7 +43,7 @@ function isSameDay(a, b) {
 function getWeekStart(date) {
   const d = new Date(date);
   const day = d.getDay(); // 0 = Sunday
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
   return new Date(d.setDate(diff));
 }
 
@@ -81,22 +83,32 @@ async function fetchAllTrades() {
     );
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Notion API error: ${res.status} ${errText}`);
+      const text = await res.text();
+      throw new Error(`Notion API error ${res.status}: ${text}`);
     }
 
     const data = await res.json();
-
     results = results.concat(data.results);
     cursor = data.has_more ? data.next_cursor : null;
 
   } while (cursor);
 
-  // Map only what engine needs
-  return results.map(page => ({
-    tradeDate: page.properties["Date"]?.date?.start || null,
-    pnl: page.properties["Net P&L"]?.number ?? 0
-  }));
+  // 🔑 Robust mapping (Number + Formula)
+  return results.map(page => {
+    const pnlProp = page.properties["Net P&L"];
+    let pnl = 0;
+
+    if (pnlProp?.type === "number") {
+      pnl = pnlProp.number ?? 0;
+    } else if (pnlProp?.type === "formula") {
+      pnl = pnlProp.formula?.number ?? 0;
+    }
+
+    return {
+      tradeDate: page.properties["Date"]?.date?.start || null,
+      pnl
+    };
+  });
 }
 
 /* =========================
@@ -173,7 +185,7 @@ function calculateStats(trades) {
 
 export default async function handler(req, res) {
   try {
-    // Serve from cache if fresh
+    // Serve cached result if fresh
     if (Date.now() - CACHE.timestamp < CACHE_TTL && CACHE.data) {
       return res.status(200).json(CACHE.data);
     }
