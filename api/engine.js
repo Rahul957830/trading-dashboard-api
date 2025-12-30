@@ -20,7 +20,7 @@ let CACHE = {
   data: null
 };
 
-const CACHE_TTL = 60 * 1000; // 60 sec
+const CACHE_TTL = 10 * 1000; // 10 seconds
 
 /* =========================
    DATE HELPERS
