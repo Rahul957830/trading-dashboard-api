@@ -1,13 +1,19 @@
-import fetch from "node-fetch";
-
 /* =========================
-   ENV CONFIG
+   REAL-TIME TRADING ENGINE
+   Vercel Serverless Function
 ========================= */
+
+// Node 18+ (Vercel) has global fetch — NO imports needed
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-// Simple cache (avoid hitting Notion too often)
+// Basic safety check
+if (!NOTION_TOKEN || !DATABASE_ID) {
+  throw new Error("Missing NOTION_TOKEN or NOTION_DATABASE_ID");
+}
+
+// Simple in-memory cache (reduces Notion API calls)
 let CACHE = {
   timestamp: 0,
   data: null
@@ -24,7 +30,7 @@ function normalizeDate(dateStr) {
   const d = new Date(dateStr);
   if (isNaN(d)) return null;
 
-  // normalize to local midnight (ignore time)
+  // Normalize to local midnight (ignore time)
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
@@ -35,7 +41,7 @@ function isSameDay(a, b) {
 function getWeekStart(date) {
   const d = new Date(date);
   const day = d.getDay(); // 0 = Sunday
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
   return new Date(d.setDate(diff));
 }
 
@@ -73,6 +79,11 @@ async function fetchAllTrades() {
         )
       }
     );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Notion API error: ${res.status} ${errText}`);
+    }
 
     const data = await res.json();
 
@@ -162,7 +173,7 @@ function calculateStats(trades) {
 
 export default async function handler(req, res) {
   try {
-    // Cache hit
+    // Serve from cache if fresh
     if (Date.now() - CACHE.timestamp < CACHE_TTL && CACHE.data) {
       return res.status(200).json(CACHE.data);
     }
