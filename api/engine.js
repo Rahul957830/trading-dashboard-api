@@ -3,25 +3,24 @@
    Platform : Vercel Serverless (Node 18)
 ========================================================= */
 
-// Node 18+ provides global fetch (no node-fetch needed)
+// Node 18+ has global fetch (no node-fetch)
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-// Fail fast if env vars are missing
 if (!NOTION_TOKEN || !DATABASE_ID) {
   throw new Error("Missing NOTION_TOKEN or NOTION_DATABASE_ID");
 }
 
 /* =========================
-   SIMPLE CACHE
+   CACHE
 ========================= */
 let CACHE = {
   timestamp: 0,
   data: null
 };
 
-const CACHE_TTL = 60 * 1000; // 60 seconds
+const CACHE_TTL = 60 * 1000; // 60 sec
 
 /* =========================
    DATE HELPERS
@@ -31,8 +30,6 @@ function normalizeDate(dateStr) {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (isNaN(d)) return null;
-
-  // Normalize to local midnight
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
@@ -59,7 +56,27 @@ function isSameMonth(date, ref) {
 }
 
 /* =========================
-   FETCH JOURNAL FROM NOTION
+   NORMALIZE NET P&L
+========================= */
+
+function extractPnL(pnlProp) {
+  if (!pnlProp) return 0;
+
+  // Number property
+  if (pnlProp.type === "number") {
+    return Number(pnlProp.number) || 0;
+  }
+
+  // Formula property
+  if (pnlProp.type === "formula") {
+    return Number(pnlProp.formula?.number) || 0;
+  }
+
+  return 0;
+}
+
+/* =========================
+   FETCH TRADES FROM NOTION
 ========================= */
 
 async function fetchAllTrades() {
@@ -93,22 +110,11 @@ async function fetchAllTrades() {
 
   } while (cursor);
 
-  // 🔑 Robust mapping (Number + Formula)
-  return results.map(page => {
-    const pnlProp = page.properties["Net P&L"];
-    let pnl = 0;
-
-    if (pnlProp?.type === "number") {
-      pnl = pnlProp.number ?? 0;
-    } else if (pnlProp?.type === "formula") {
-      pnl = pnlProp.formula?.number ?? 0;
-    }
-
-    return {
-      tradeDate: page.properties["Date"]?.date?.start || null,
-      pnl
-    };
-  });
+  // 🔒 Single source of truth for P&L
+  return results.map(page => ({
+    tradeDate: page.properties["Date"]?.date?.start || null,
+    pnl: extractPnL(page.properties["Net P&L"])
+  }));
 }
 
 /* =========================
@@ -126,8 +132,10 @@ function calculateStats(trades) {
     const tradeDate = normalizeDate(t.tradeDate);
     if (!tradeDate) return;
 
-    const pnl = Number(t.pnl);
-    if (isNaN(pnl)) return;
+    const pnl = t.pnl;
+    if (pnl === 0) {
+      // breakeven trade → counts as trade, not win/loss
+    }
 
     if (isSameDay(tradeDate, today)) {
       daily.pl += pnl;
@@ -180,12 +188,11 @@ function calculateStats(trades) {
 }
 
 /* =========================
-   API ENTRY POINT
+   API HANDLER
 ========================= */
 
 export default async function handler(req, res) {
   try {
-    // Serve cached result if fresh
     if (Date.now() - CACHE.timestamp < CACHE_TTL && CACHE.data) {
       return res.status(200).json(CACHE.data);
     }
