@@ -68,27 +68,40 @@ html, body {
   top: 50%;
   left: 50%;
   transform-origin: 0% 50%;
-  border-radius: 4px;
 }
 
+/* 🔺 HOUR HAND — ARROW / NEEDLE */
 .hour {
-  width: 28%;
-  height: 5px;
+  width: 30%;
+  height: 6px;
   background: var(--hand-main);
-  box-shadow: 0 0 24px rgba(140,255,205,1);
+  clip-path: polygon(
+    0% 15%,
+    88% 0%,
+    100% 50%,
+    88% 100%,
+    0% 85%
+  );
+  box-shadow:
+    0 0 18px rgba(140,255,205,0.9),
+    0 0 8px rgba(140,255,205,0.6);
 }
 
+/* MINUTE HAND */
 .minute {
   width: 42%;
   height: 3px;
   background: var(--hand-soft);
+  border-radius: 4px;
   box-shadow: 0 0 22px rgba(140,255,205,0.95);
 }
 
+/* SECOND HAND */
 .second {
   width: 46%;
   height: 2px;
   background: rgb(255,70,70);
+  border-radius: 2px;
   box-shadow:
     0 0 34px rgba(255,70,70,1),
     0 0 22px rgba(255,150,150,1);
@@ -137,7 +150,7 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* restore last visual state */
+/* restore visual state */
 const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
 if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
 if (savedVisual.tints) {
@@ -154,7 +167,7 @@ function getMonthProgressAngle() {
   return (day / days) * 360 - 90;
 }
 
-/* apply monthly state (NO PULSE) */
+/* apply monthly state */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
