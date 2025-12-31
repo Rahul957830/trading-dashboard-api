@@ -11,13 +11,20 @@ html, body {
   background: transparent;
 }
 
-/* NOTION-SAFE CONTAINER */
+/* Container safe for Notion */
 .safe-zone {
   width: 320px;
   height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* CSS variables for subtle tinting */
+:root {
+  --marker-color: rgba(195,255,235,1);
+  --hand-main: rgba(235,255,245,1);
+  --hand-soft: rgba(215,255,240,1);
 }
 
 /* CLOCK */
@@ -28,10 +35,9 @@ html, body {
   border-radius: 50%;
   background: transparent;
 
-  /* default neutral */
   box-shadow:
     inset 0 0 34px rgba(0,0,0,0.9),
-    0 0 56px rgba(190,190,190,0.75);
+    0 0 36px rgba(160,160,160,0.35);
 }
 
 /* inner depth */
@@ -49,7 +55,7 @@ html, body {
   position: absolute;
   width: 3px;
   height: 12px;
-  background: rgba(195,255,235,1);
+  background: var(--marker-color);
   top: 12px;
   left: 50%;
   transform-origin: center 88px;
@@ -68,7 +74,7 @@ html, body {
 .hour {
   width: 28%;
   height: 5px;
-  background: rgba(235,255,245,1);
+  background: var(--hand-main);
   box-shadow: 0 0 24px rgba(140,255,205,1);
 }
 
@@ -76,11 +82,11 @@ html, body {
 .minute {
   width: 42%;
   height: 3px;
-  background: rgba(215,255,240,1);
+  background: var(--hand-soft);
   box-shadow: 0 0 22px rgba(140,255,205,0.95);
 }
 
-/* second hand */
+/* second hand (always red) */
 .second {
   width: 46%;
   height: 2px;
@@ -95,7 +101,7 @@ html, body {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: rgba(235,255,245,1);
+  background: var(--hand-main);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   top: 50%;
@@ -128,13 +134,19 @@ html, body {
 
 <script>
 const clock = document.getElementById("clock");
+const root = document.documentElement;
 const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* restore visual */
+/* restore saved styles */
 const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
 if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
+if (savedVisual.tints) {
+  root.style.setProperty("--marker-color", savedVisual.tints.marker);
+  root.style.setProperty("--hand-main", savedVisual.tints.main);
+  root.style.setProperty("--hand-soft", savedVisual.tints.soft);
+}
 
 /* restore angles */
 const savedAngles = JSON.parse(localStorage.getItem("clockAngles") || "{}");
@@ -152,37 +164,63 @@ function getMonthProgressAngle() {
   return (day / days) * 360 - 90;
 }
 
-/* apply monthly P&L */
+/* apply monthly state */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
     const data = await res.json();
     const pl = data.monthly.pl;
 
-    let glow;
+    let glow, tints;
 
     if (pl > 0) {
+      /* PROFIT — subtle mint bias */
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
         0 0 60px rgba(120,255,195,0.95)
       `;
+      tints = {
+        marker: "rgba(195,255,235,1)",
+        main:   "rgba(235,255,245,1)",
+        soft:   "rgba(215,255,240,1)"
+      };
     } else if (pl < 0) {
+      /* LOSS — neutral, colder white */
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
         0 0 60px rgba(240,90,90,0.9)
       `;
+      tints = {
+        marker: "rgba(220,230,230,0.9)",
+        main:   "rgba(230,235,235,0.95)",
+        soft:   "rgba(210,220,220,0.9)"
+      };
     } else {
+      /* NEUTRAL / NO TRADES — calm grey */
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
-        0 0 56px rgba(200,200,200,0.85)
+        0 0 36px rgba(160,160,160,0.35)
       `;
+      tints = {
+        marker: "rgba(190,190,190,0.8)",
+        main:   "rgba(210,210,210,0.9)",
+        soft:   "rgba(195,195,195,0.85)"
+      };
     }
 
     clock.style.boxShadow = glow;
-    localStorage.setItem("clockVisual", JSON.stringify({ glow }));
+
+    root.style.setProperty("--marker-color", tints.marker);
+    root.style.setProperty("--hand-main", tints.main);
+    root.style.setProperty("--hand-soft", tints.soft);
+
+    localStorage.setItem(
+      "clockVisual",
+      JSON.stringify({ glow, tints })
+    );
 
   } catch {
-    /* offline: keep last state */
+    /* offline → keep last state */
   }
 }
 
@@ -203,9 +241,11 @@ function updateClock() {
   );
 }
 
+/* init */
 updateClock();
 applyMonthlyState();
 
+/* intervals */
 setInterval(updateClock, 1000);
 setInterval(applyMonthlyState, 10 * 1000);
 </script>
