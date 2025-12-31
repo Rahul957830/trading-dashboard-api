@@ -35,7 +35,7 @@ html, body {
   border-radius: 50%;
   background: transparent;
 
-  /* default neutral */
+  /* default calm grey */
   box-shadow:
     inset 0 0 34px rgba(0,0,0,0.9),
     0 0 36px rgba(160,160,160,0.35);
@@ -106,17 +106,6 @@ html, body {
   left: 50%;
   box-shadow: 0 0 22px rgba(140,255,205,1);
 }
-
-/* PULSE ANIMATION */
-@keyframes slowPulse {
-  0%   { box-shadow: var(--base-glow); }
-  50%  { box-shadow: var(--pulse-glow); }
-  100% { box-shadow: var(--base-glow); }
-}
-
-.clock.slow-pulse {
-  animation: slowPulse 1.6s ease-in-out infinite;
-}
 </style>
 </head>
 
@@ -148,7 +137,7 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* RESTORE STATE */
+/* restore last visual state */
 const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
 if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
 if (savedVisual.tints) {
@@ -157,7 +146,7 @@ if (savedVisual.tints) {
   root.style.setProperty("--hand-soft", savedVisual.tints.soft);
 }
 
-/* MONTH PROGRESS */
+/* month progress */
 function getMonthProgressAngle() {
   const now = new Date();
   const day = now.getDate();
@@ -165,87 +154,40 @@ function getMonthProgressAngle() {
   return (day / days) * 360 - 90;
 }
 
-/* APPLY MONTHLY STATE */
+/* apply monthly state (NO PULSE) */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
     const data = await res.json();
     const pl = data.monthly.pl;
 
-    const today = new Date().toISOString().slice(0, 10);
-    const lastDate = localStorage.getItem("lastPulseDate");
-    let pulseUsed = Number(localStorage.getItem("pulseUsedToday") || 0);
+    let glow, tints;
 
-    if (lastDate !== today) {
-      pulseUsed = 0;
-      localStorage.setItem("lastPulseDate", today);
-    }
-
-    let glow, pulseGlow, tints;
-    let shouldPulse = false;
-
-    if (pl >= 25000) {
+    if (pl > 0) {
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
         0 0 60px rgba(120,255,195,0.95)
-      `;
-      pulseGlow = `
-        inset 0 0 34px rgba(0,0,0,0.9),
-        0 0 90px rgba(140,255,210,1)
       `;
       tints = {
         marker: "rgba(195,255,235,1)",
         main: "rgba(235,255,245,1)",
         soft: "rgba(215,255,240,1)"
       };
-      shouldPulse = true;
-
-    } else if (pl <= -10000) {
-      glow = `
-        inset 0 0 34px rgba(0,0,0,0.9),
-        0 0 60px rgba(240,90,90,0.9)
-      `;
-      pulseGlow = `
-        inset 0 0 34px rgba(0,0,0,0.9),
-        0 0 90px rgba(255,120,120,1)
-      `;
-      tints = {
-        marker: "rgba(220,230,230,0.9)",
-        main: "rgba(230,235,235,0.95)",
-        soft: "rgba(210,220,220,0.9)"
-      };
-      shouldPulse = true;
-
-    } else if (pl > 0) {
-      glow = `
-        inset 0 0 34px rgba(0,0,0,0.9),
-        0 0 60px rgba(120,255,195,0.95)
-      `;
-      pulseGlow = glow;
-      tints = {
-        marker: "rgba(195,255,235,1)",
-        main: "rgba(235,255,245,1)",
-        soft: "rgba(215,255,240,1)"
-      };
-
     } else if (pl < 0) {
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
         0 0 60px rgba(240,90,90,0.9)
       `;
-      pulseGlow = glow;
       tints = {
         marker: "rgba(220,230,230,0.9)",
         main: "rgba(230,235,235,0.95)",
         soft: "rgba(210,220,220,0.9)"
       };
-
     } else {
       glow = `
         inset 0 0 34px rgba(0,0,0,0.9),
         0 0 36px rgba(160,160,160,0.35)
       `;
-      pulseGlow = glow;
       tints = {
         marker: "rgba(190,190,190,0.8)",
         main: "rgba(210,210,210,0.9)",
@@ -254,21 +196,9 @@ async function applyMonthlyState() {
     }
 
     clock.style.boxShadow = glow;
-    clock.style.setProperty("--base-glow", glow);
-    clock.style.setProperty("--pulse-glow", pulseGlow);
-
     root.style.setProperty("--marker-color", tints.marker);
     root.style.setProperty("--hand-main", tints.main);
     root.style.setProperty("--hand-soft", tints.soft);
-
-    if (shouldPulse && pulseUsed < 1) {
-      clock.classList.add("slow-pulse");
-      localStorage.setItem("pulseUsedToday", 1);
-
-      setTimeout(() => {
-        clock.classList.remove("slow-pulse");
-      }, 5000);
-    }
 
     localStorage.setItem(
       "clockVisual",
@@ -276,11 +206,11 @@ async function applyMonthlyState() {
     );
 
   } catch {
-    /* offline safe */
+    /* offline → keep last state */
   }
 }
 
-/* UPDATE HANDS */
+/* update hands */
 function updateClock() {
   const now = new Date();
   hourHand.style.transform = `rotate(${getMonthProgressAngle()}deg)`;
