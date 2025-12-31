@@ -11,16 +11,14 @@ html, body {
   background: transparent;
 }
 
-/* SAFETY ZONE — enlarged to prevent glow clipping */
+/* PERFECT FIT ZONE (clock 200 + glow room) */
 .safe-zone {
-  width: 300px;
-  height: 300px;
-  padding: 30px;              /* <<< IMPORTANT */
+  width: 260px;
+  height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: visible;
-  box-sizing: border-box;
 }
 
 /* CLOCK */
@@ -31,14 +29,20 @@ html, body {
   border-radius: 50%;
   background: transparent;
   overflow: visible;
+
+  /* default neutral */
+  box-shadow:
+    inset 0 0 28px rgba(0,0,0,0.75),
+    0 0 36px rgba(170,170,170,0.45);
 }
 
-/* inner halo */
+/* inner depth */
 .clock::before {
   content: "";
   position: absolute;
   inset: 6px;
   border-radius: 50%;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
   pointer-events: none;
 }
 
@@ -47,7 +51,7 @@ html, body {
   position: absolute;
   width: 3px;
   height: 12px;
-  background: rgba(165, 225, 205, 0.95);
+  background: rgba(170,230,210,0.95);
   top: 12px;
   left: 50%;
   transform-origin: center 88px;
@@ -62,20 +66,20 @@ html, body {
   border-radius: 4px;
 }
 
-/* hour hand (month progress) */
+/* hour hand – month progress */
 .hour {
   width: 28%;
   height: 5px;
-  background: rgba(215,255,240,1);
-  box-shadow: 0 0 16px rgba(130,255,200,1);
+  background: rgba(220,255,240,1);
+  box-shadow: 0 0 18px rgba(120,255,190,1);
 }
 
 /* minute hand */
 .minute {
   width: 42%;
   height: 3px;
-  background: rgba(195,245,230,0.98);
-  box-shadow: 0 0 14px rgba(130,255,200,0.8);
+  background: rgba(200,245,230,0.98);
+  box-shadow: 0 0 16px rgba(120,255,190,0.85);
 }
 
 /* second hand */
@@ -93,12 +97,12 @@ html, body {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: rgba(215,255,240,1);
+  background: rgba(220,255,240,1);
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 16px rgba(130,255,200,1);
+  box-shadow: 0 0 16px rgba(120,255,190,1);
 }
 </style>
 </head>
@@ -120,6 +124,7 @@ html, body {
     <div class="hand minute" id="minute"></div>
     <div class="hand second" id="second"></div>
     <div class="center-dot"></div>
+
   </div>
 </div>
 
@@ -129,7 +134,7 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* restore visuals */
+/* restore visual */
 const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
 if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
 
@@ -145,11 +150,11 @@ if (savedAngles.h !== undefined) {
 function getMonthProgressAngle() {
   const now = new Date();
   const day = now.getDate();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return (day / daysInMonth) * 360 - 90;
+  const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return (day / days) * 360 - 90;
 }
 
-/* apply P&L visuals */
+/* apply monthly P&L */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
@@ -159,25 +164,22 @@ async function applyMonthlyState() {
     let glow;
 
     if (pl > 0) {
-      /* EMERALD — STRONG */
+      /* STRONG EMERALD */
       glow = `
-        inset 0 0 36px rgba(0,0,0,0.75),
-        0 0 55px rgba(120,255,200,0.75),
-        0 0 28px rgba(120,255,200,1)
+        inset 0 0 28px rgba(0,0,0,0.8),
+        0 0 44px rgba(120,255,190,0.75)
       `;
     } else if (pl < 0) {
-      /* MUTED RED — STRONG */
+      /* STRONG MUTED RED */
       glow = `
-        inset 0 0 36px rgba(0,0,0,0.75),
-        0 0 52px rgba(230,90,90,0.65),
-        0 0 26px rgba(230,90,90,0.9)
+        inset 0 0 28px rgba(0,0,0,0.8),
+        0 0 44px rgba(230,90,90,0.65)
       `;
     } else {
-      /* GREY — VISIBLE */
+      /* STRONG GREY */
       glow = `
-        inset 0 0 34px rgba(0,0,0,0.75),
-        0 0 46px rgba(190,190,190,0.55),
-        0 0 20px rgba(190,190,190,0.75)
+        inset 0 0 28px rgba(0,0,0,0.8),
+        0 0 40px rgba(180,180,180,0.55)
       `;
     }
 
@@ -185,7 +187,7 @@ async function applyMonthlyState() {
     localStorage.setItem("clockVisual", JSON.stringify({ glow }));
 
   } catch {
-    /* offline → keep last state */
+    /* offline: keep last state */
   }
 }
 
