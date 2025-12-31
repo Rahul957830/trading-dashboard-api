@@ -11,11 +11,11 @@ html, body {
   background: transparent;
 }
 
-/* SAFETY ZONE */
+/* SAFETY ZONE — enlarged to prevent glow clipping */
 .safe-zone {
-  width: 320px;
-  height: 320px;
-  padding: 40px;
+  width: 300px;
+  height: 300px;
+  padding: 30px;              /* <<< IMPORTANT */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,7 +23,7 @@ html, body {
   box-sizing: border-box;
 }
 
-/* CLOCK BASE */
+/* CLOCK */
 .clock {
   position: relative;
   width: 200px;
@@ -33,46 +33,27 @@ html, body {
   overflow: visible;
 }
 
-/* RADIAL HALO — PERFECTLY EVEN */
-.clock::after {
-  content: "";
-  position: absolute;
-  inset: -40px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(120,255,200,0.45) 0%,
-    rgba(120,255,200,0.30) 35%,
-    rgba(120,255,200,0.15) 55%,
-    rgba(120,255,200,0.05) 65%,
-    transparent 72%
-  );
-  pointer-events: none;
-  transition: background 0.6s ease;
-}
-
-/* INNER DEPTH */
+/* inner halo */
 .clock::before {
   content: "";
   position: absolute;
   inset: 6px;
   border-radius: 50%;
-  box-shadow: inset 0 0 28px rgba(0,0,0,0.75);
   pointer-events: none;
 }
 
-/* MARKERS */
+/* hour markers */
 .marker {
   position: absolute;
   width: 3px;
   height: 12px;
-  background: rgba(170, 230, 210, 0.95);
+  background: rgba(165, 225, 205, 0.95);
   top: 12px;
   left: 50%;
   transform-origin: center 88px;
 }
 
-/* HANDS */
+/* hands */
 .hand {
   position: absolute;
   top: 50%;
@@ -81,43 +62,43 @@ html, body {
   border-radius: 4px;
 }
 
-/* HOUR — MONTH PROGRESS */
+/* hour hand (month progress) */
 .hour {
   width: 28%;
   height: 5px;
-  background: rgba(220,255,240,1);
-  box-shadow: 0 0 16px rgba(140,255,200,1);
+  background: rgba(215,255,240,1);
+  box-shadow: 0 0 16px rgba(130,255,200,1);
 }
 
-/* MINUTE */
+/* minute hand */
 .minute {
   width: 42%;
   height: 3px;
-  background: rgba(200,245,230,0.98);
-  box-shadow: 0 0 14px rgba(140,255,200,0.85);
+  background: rgba(195,245,230,0.98);
+  box-shadow: 0 0 14px rgba(130,255,200,0.8);
 }
 
-/* SECOND */
+/* second hand */
 .second {
   width: 46%;
   height: 2px;
-  background: rgb(255,80,80);
+  background: rgb(255,70,70);
   box-shadow:
-    0 0 26px rgba(255,80,80,1),
-    0 0 16px rgba(255,150,150,0.9);
+    0 0 26px rgba(255,70,70,1),
+    0 0 16px rgba(255,140,140,0.9);
 }
 
-/* CENTER */
+/* center dot */
 .center-dot {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: rgba(220,255,240,1);
+  background: rgba(215,255,240,1);
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 16px rgba(140,255,200,1);
+  box-shadow: 0 0 16px rgba(130,255,200,1);
 }
 </style>
 </head>
@@ -126,6 +107,7 @@ html, body {
 
 <div class="safe-zone">
   <div class="clock" id="clock">
+
     <script>
       for (let i = 0; i < 12; i++) {
         document.write(
@@ -147,10 +129,11 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* RESTORE STATE */
+/* restore visuals */
 const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
-if (savedVisual.halo) clock.style.setProperty("--halo", savedVisual.halo);
+if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
 
+/* restore angles */
 const savedAngles = JSON.parse(localStorage.getItem("clockAngles") || "{}");
 if (savedAngles.h !== undefined) {
   hourHand.style.transform = `rotate(${savedAngles.h}deg)`;
@@ -158,196 +141,55 @@ if (savedAngles.h !== undefined) {
   secondHand.style.transform = `rotate(${savedAngles.s}deg)`;
 }
 
-/* MONTH PROGRESS */
+/* month progress */
 function getMonthProgressAngle() {
   const now = new Date();
   const day = now.getDate();
-  const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return (day / days) * 360 - 90;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return (day / daysInMonth) * 360 - 90;
 }
 
-/* APPLY P&L HALO */
+/* apply P&L visuals */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
     const data = await res.json();
     const pl = data.monthly.pl;
 
-    let halo;
+    let glow;
 
     if (pl > 0) {
-      /* EMERALD */
-      halo = `
-        radial-gradient(
-          circle,
-          rgba(120,255,200,0.55) 0%,
-          rgba(120,255,200,0.35) 35%,
-          rgba(120,255,200,0.18) 55%,
-          rgba(120,255,200,0.07) 65%,
-          transparent 72%
-        )
+      /* EMERALD — STRONG */
+      glow = `
+        inset 0 0 36px rgba(0,0,0,0.75),
+        0 0 55px rgba(120,255,200,0.75),
+        0 0 28px rgba(120,255,200,1)
       `;
     } else if (pl < 0) {
-      /* RED */
-      halo = `
-        radial-gradient(
-          circle,
-          rgba(255,100,100,0.55) 0%,
-          rgba(255,100,100,0.35) 35%,
-          rgba(255,100,100,0.18) 55%,
-          rgba(255,100,100,0.07) 65%,
-          transparent 72%
-        )
+      /* MUTED RED — STRONG */
+      glow = `
+        inset 0 0 36px rgba(0,0,0,0.75),
+        0 0 52px rgba(230,90,90,0.65),
+        0 0 26px rgba(230,90,90,0.9)
       `;
     } else {
-      /* GREY */
-      halo = `
-        radial-gradient(
-          circle,
-          rgba(190,190,190,0.45) 0%,
-          rgba(190,190,190,0.30) 35%,
-          rgba(190,190,190,0.16) 55%,
-          rgba(190,190,190,0.06) 65%,
-          transparent 72%
-        )
+      /* GREY — VISIBLE */
+      glow = `
+        inset 0 0 34px rgba(0,0,0,0.75),
+        0 0 46px rgba(190,190,190,0.55),
+        0 0 20px rgba(190,190,190,0.75)
       `;
     }
 
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-    clock.querySelector("::after");
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--dummy", Math.random()); // force repaint
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    clock.style.setProperty("--halo", halo);
-
-    clock.style.setProperty("--halo-bg", halo);
-
-    localStorage.setItem("clockVisual", JSON.stringify({ halo }));
+    clock.style.boxShadow = glow;
+    localStorage.setItem("clockVisual", JSON.stringify({ glow }));
 
   } catch {
     /* offline → keep last state */
   }
 }
 
-/* UPDATE HANDS */
+/* update hands */
 function updateClock() {
   const now = new Date();
   const hDeg = getMonthProgressAngle();
