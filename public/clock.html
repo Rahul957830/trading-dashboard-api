@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Discipline Clock – Base</title>
+<title>Discipline Clock</title>
 
 <style>
 html, body {
@@ -65,7 +65,7 @@ html, body {
   border-radius: 4px;
 }
 
-/* hour hand */
+/* hour hand (MONTH PROGRESS) */
 .hour {
   width: 28%;
   height: 5px;
@@ -73,7 +73,7 @@ html, body {
   box-shadow: 0 0 12px rgba(120,255,180,0.8);
 }
 
-/* minute hand */
+/* minute hand (REAL TIME) */
 .minute {
   width: 42%;
   height: 3px;
@@ -81,7 +81,7 @@ html, body {
   box-shadow: 0 0 10px rgba(120,255,180,0.6);
 }
 
-/* second hand */
+/* second hand (REAL TIME) */
 .second {
   width: 46%;
   height: 2px;
@@ -134,7 +134,7 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* restore last angles if offline reload */
+/* restore last known state (offline safe) */
 const saved = JSON.parse(localStorage.getItem("clockAngles") || "{}");
 if (saved.h !== undefined) {
   hourHand.style.transform = `rotate(${saved.h}deg)`;
@@ -142,22 +142,36 @@ if (saved.h !== undefined) {
   secondHand.style.transform = `rotate(${saved.s}deg)`;
 }
 
-/* real clock */
+/* MONTH PROGRESS CALCULATION */
+function getMonthProgressAngle() {
+  const now = new Date();
+  const day = now.getDate();
+  const daysInMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0
+  ).getDate();
+
+  const progress = day / daysInMonth;
+  return (progress * 360) - 90;
+}
+
+/* UPDATE CLOCK */
 function updateClock() {
   const now = new Date();
-  const h = now.getHours() % 12;
-  const m = now.getMinutes();
-  const s = now.getSeconds();
 
-  const hDeg = (h * 30 + m * 0.5) - 90;
-  const mDeg = (m * 6) - 90;
-  const sDeg = (s * 6) - 90;
+  /* hour hand → month progress */
+  const hDeg = getMonthProgressAngle();
+
+  /* minute & second → real time */
+  const mDeg = (now.getMinutes() * 6) - 90;
+  const sDeg = (now.getSeconds() * 6) - 90;
 
   hourHand.style.transform = `rotate(${hDeg}deg)`;
   minuteHand.style.transform = `rotate(${mDeg}deg)`;
   secondHand.style.transform = `rotate(${sDeg}deg)`;
 
-  /* persist last state */
+  /* persist state */
   localStorage.setItem(
     "clockAngles",
     JSON.stringify({ h: hDeg, m: mDeg, s: sDeg })
