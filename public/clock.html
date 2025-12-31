@@ -1,52 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Monthly Discipline Clock</title>
+<meta charset="UTF-8">
+<title>Discipline Clock – Base</title>
 
 <style>
 html, body {
   margin: 0;
-  background: #000;
+  padding: 0;
+  background: transparent;
 }
 
-/* wrapper */
+/* safety wrapper */
 .safe-zone {
   width: 260px;
   height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 
-/* CLOCK BODY */
+/* CLOCK */
 .clock {
   position: relative;
   width: 200px;
   height: 200px;
   border-radius: 50%;
-
-  background: #555;
-  border: 6px solid #555;
+  background: transparent;
+  overflow: visible;
 
   box-shadow:
-    0 0 50px #555,
-    inset 0 0 25px rgba(0,0,0,0.7);
-
-  transition: background-color 0.4s linear,
-              border-color 0.4s linear,
-              box-shadow 0.4s linear;
+    inset 0 0 26px rgba(0,0,0,0.6),
+    0 0 22px rgba(120,255,180,0.35);
 }
 
-/* markers */
+/* inner halo */
+.clock::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 28px rgba(120,255,180,0.25);
+  pointer-events: none;
+}
+
+/* hour markers */
 .marker {
   position: absolute;
-  width: 4px;
-  height: 14px;
-  background: #000;
-  top: 10px;
+  width: 3px;
+  height: 12px;
+  background: rgba(140,255,180,0.75);
+  top: 12px;
   left: 50%;
-  transform-origin: center 90px;
+  transform-origin: center 88px;
 }
 
 /* hands */
@@ -55,36 +62,46 @@ html, body {
   top: 50%;
   left: 50%;
   transform-origin: 0% 50%;
+  border-radius: 4px;
 }
 
+/* hour hand */
 .hour {
-  width: 35%;
-  height: 6px;
-  background: #000;
+  width: 28%;
+  height: 5px;
+  background: rgba(190,255,220,1);
+  box-shadow: 0 0 12px rgba(120,255,180,0.8);
 }
 
+/* minute hand */
 .minute {
-  width: 45%;
+  width: 42%;
   height: 3px;
-  background: #111;
+  background: rgba(160,255,200,0.95);
+  box-shadow: 0 0 10px rgba(120,255,180,0.6);
 }
 
+/* second hand */
 .second {
-  width: 48%;
+  width: 46%;
   height: 2px;
-  background: #111;
+  background: rgb(255, 60, 60);
+  box-shadow:
+    0 0 32px rgba(255, 60, 60, 1),
+    0 0 16px rgba(255, 120, 120, 0.9);
 }
 
-/* center */
+/* center dot */
 .center-dot {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background: #000;
+  width: 8px;
+  height: 8px;
+  background: rgba(190,255,220,1);
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(120,255,180,1);
 }
 </style>
 </head>
@@ -113,68 +130,42 @@ html, body {
 </div>
 
 <script>
-const clock = document.getElementById("clock");
 const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* freeze minute & second */
-minuteHand.style.transform = "rotate(0deg)";
-secondHand.style.transform = "rotate(0deg)";
+/* restore last angles if offline reload */
+const saved = JSON.parse(localStorage.getItem("clockAngles") || "{}");
+if (saved.h !== undefined) {
+  hourHand.style.transform = `rotate(${saved.h}deg)`;
+  minuteHand.style.transform = `rotate(${saved.m}deg)`;
+  secondHand.style.transform = `rotate(${saved.s}deg)`;
+}
 
-/* MONTH PROGRESS */
-function updateMonthHand() {
+/* real clock */
+function updateClock() {
   const now = new Date();
-  const daysInMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0
-  ).getDate();
+  const h = now.getHours() % 12;
+  const m = now.getMinutes();
+  const s = now.getSeconds();
 
-  const progress = now.getDate() / daysInMonth;
-  const angle = progress * 360 - 90;
+  const hDeg = (h * 30 + m * 0.5) - 90;
+  const mDeg = (m * 6) - 90;
+  const sDeg = (s * 6) - 90;
 
-  hourHand.style.transform = `rotate(${angle}deg)`;
+  hourHand.style.transform = `rotate(${hDeg}deg)`;
+  minuteHand.style.transform = `rotate(${mDeg}deg)`;
+  secondHand.style.transform = `rotate(${sDeg}deg)`;
+
+  /* persist last state */
+  localStorage.setItem(
+    "clockAngles",
+    JSON.stringify({ h: hDeg, m: mDeg, s: sDeg })
+  );
 }
 
-/* ENGINE → COLOR (INLINE, NO CSS VARS) */
-async function applyMonthlyState() {
-  try {
-    const res = await fetch("/api/engine?t=" + Date.now());
-    const data = await res.json();
-
-    const pl = data.monthly.pl;
-
-    let color;
-
-    if (pl > 0) {
-      color = "#00ff88";   // GREEN
-    } else if (pl < 0) {
-      color = "#ff3b3b";   // RED
-    } else {
-      color = "#999999";   // GREY
-    }
-
-    clock.style.backgroundColor = color;
-    clock.style.borderColor = color;
-    clock.style.boxShadow = `
-      0 0 60px ${color},
-      inset 0 0 30px rgba(0,0,0,0.7)
-    `;
-
-  } catch (e) {
-    clock.style.backgroundColor = "#000";
-    clock.style.borderColor = "#000";
-  }
-}
-
-/* INIT */
-updateMonthHand();
-applyMonthlyState();
-
-/* REFRESH */
-setInterval(updateMonthHand, 60 * 60 * 1000); // hourly
-setInterval(applyMonthlyState, 10 * 1000);    // every 10s
+updateClock();
+setInterval(updateClock, 1000);
 </script>
 
 </body>
