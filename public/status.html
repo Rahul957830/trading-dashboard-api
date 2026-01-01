@@ -8,7 +8,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent !important;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -18,11 +18,9 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
 }
 
 canvas {
-  display: block;
   background: transparent;
 }
 </style>
@@ -36,7 +34,7 @@ canvas {
 
 <script>
 const canvas = document.getElementById("status");
-const ctx = canvas.getContext("2d", { alpha: true });
+const ctx = canvas.getContext("2d");
 
 const CENTER = { x: 110, y: 90 };
 const RADIUS = 66;
@@ -44,23 +42,41 @@ const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 
-/* ================= FETCH ================= */
-async function fetchData() {
-  const res = await fetch(
-    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
-    { cache: "no-store" }
-  );
-  return res.json();
+/* ===== STATE (never undefined) ===== */
+let systemState = {
+  status: "INACTIVE",
+  winrate: 0
+};
+
+/* ===== SAFE FETCH (timer based) ===== */
+async function updateState() {
+  try {
+    const res = await fetch(
+      "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+
+    if (data.weekly?.trades > 0) {
+      systemState.status = "ACTIVE";
+      systemState.winrate = data.weekly.winrate || 0;
+    } else if (data.monthly?.trades > 0) {
+      systemState.status = "IDLE";
+      systemState.winrate = 0;
+    } else {
+      systemState.status = "INACTIVE";
+      systemState.winrate = 0;
+    }
+  } catch {
+    // keep last known state
+  }
 }
 
-/* ================= STATUS ================= */
-function getStatus(data) {
-  if (data.weekly?.trades > 0) return "ACTIVE";
-  if (data.monthly?.trades > 0) return "IDLE";
-  return "INACTIVE";
-}
+/* fetch every 10 seconds */
+updateState();
+setInterval(updateState, 10000);
 
-/* ================= COLORS ================= */
+/* ===== COLORS ===== */
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
@@ -83,9 +99,8 @@ function getColors(status) {
   };
 }
 
-/* ================= RING ================= */
+/* ===== DRAW ===== */
 function drawRing(color) {
-  ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
@@ -93,25 +108,21 @@ function drawRing(color) {
   ctx.shadowColor = color;
   ctx.shadowBlur = 36;
   ctx.stroke();
-  ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
-/* ================= INNER DEPTH ================= */
-function drawInnerDepth(color) {
+function drawInner(color) {
   if (!color) return;
-  ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
-  ctx.restore();
 }
 
-/* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
-  const fillHeight = INNER_RADIUS * 2 * level;
+  const h = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
 
   ctx.save();
@@ -120,54 +131,40 @@ function drawFuel(level, color) {
   ctx.clip();
 
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
-
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
       Math.sin((x + waveOffset) * 0.05) * 4 +
-      (baseY - fillHeight);
+      (baseY - h);
     ctx.lineTo(CENTER.x + x, y);
   }
-
   ctx.lineTo(CENTER.x + INNER_RADIUS, baseY);
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
   ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
   ctx.fill();
   ctx.restore();
 }
 
-/* ================= LOOP ================= */
-async function render() {
+/* ===== MAIN LOOP (never async) ===== */
+function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  try {
-    const data = await fetchData();
-    const status = getStatus(data);
-    const colors = getColors(status);
+  const colors = getColors(systemState.status);
 
-    drawInnerDepth(colors.mist);
-    drawRing(colors.ring);
+  drawInner(colors.mist);
+  drawRing(colors.ring);
 
-    if (status === "ACTIVE") {
-      const winrate = Math.max(
-        0,
-        Math.min(1, (data.weekly.winrate || 0) / 100)
-      );
-      drawFuel(winrate, colors.fuel);
-    }
-  } catch (e) {
-    // silent by design
+  if (systemState.status === "ACTIVE") {
+    drawFuel(systemState.winrate / 100, colors.fuel);
   }
 
   waveOffset += 0.6;
-  requestAnimationFrame(render);
+  requestAnimationFrame(loop);
 }
 
-render();
+loop();
 </script>
 
 </body>
