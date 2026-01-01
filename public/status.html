@@ -108,7 +108,6 @@ function drawInnerDepth() {
 
 /* ================= RING ================= */
 function drawRing(color, glow, status) {
-  // constant breathing (no heartbeat sync)
   glowPhase += 0.02;
   const breathing = 30 + Math.sin(glowPhase) * 10;
 
@@ -122,9 +121,9 @@ function drawRing(color, glow, status) {
   ctx.stroke();
   ctx.restore();
 
-  /* Micro shimmer (ACTIVE only) */
+  /* 🔹 Micro shimmer (ACTIVE only) */
   if (status === "ACTIVE") {
-    shimmerPhase += 0.01;
+    shimmerPhase += 0.018;
     ctx.save();
     ctx.beginPath();
     ctx.arc(
@@ -132,10 +131,10 @@ function drawRing(color, glow, status) {
       CENTER.y,
       RADIUS,
       shimmerPhase,
-      shimmerPhase + Math.PI / 3
+      shimmerPhase + Math.PI / 2.2
     );
-    ctx.strokeStyle = "rgba(255,255,255,0.15)";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
   }
