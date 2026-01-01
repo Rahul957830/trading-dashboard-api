@@ -48,6 +48,20 @@ let heatPhase = 0;
 let boilPhase = 0;
 let latestData = null;
 
+/* ================= BUBBLES ================= */
+const bubbles = Array.from({ length: 8 }, () => createBubble());
+
+function createBubble() {
+  return {
+    x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.8,
+    y: Math.random() * INNER_RADIUS * 2,
+    r: 1 + Math.random() * 1.5,
+    speed: 0.15 + Math.random() * 0.25,
+    drift: (Math.random() * 2 - 1) * 0.15,
+    alpha: 0.15 + Math.random() * 0.15
+  };
+}
+
 /* ================= FETCH ================= */
 async function fetchData() {
   try {
@@ -75,7 +89,8 @@ function getColors(status) {
     return {
       ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,1)",
-      fuel: "rgba(120,255,200,0.7)"
+      fuel: "rgba(120,255,200,0.7)",
+      bubble: "rgba(200,255,235,0.6)"
     };
   }
   if (status === "IDLE") {
@@ -122,10 +137,8 @@ function drawRing(color, glow, status) {
   ctx.stroke();
   ctx.restore();
 
-  /* 🔹 Soft shimmer (ACTIVE only, polished look) */
   if (status === "ACTIVE") {
     shimmerPhase += 0.008;
-
     ctx.save();
     ctx.beginPath();
     ctx.arc(
@@ -142,8 +155,8 @@ function drawRing(color, glow, status) {
   }
 }
 
-/* ================= FUEL (ELEGANT BOIL) ================= */
-function drawFuel(level, color) {
+/* ================= FUEL + BUBBLES ================= */
+function drawFuel(level, color, bubbleColor) {
   if (!color || level <= 0) return;
 
   const h = INNER_RADIUS * 2 * level;
@@ -156,6 +169,7 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
+  /* surface */
   ctx.beginPath();
   ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
 
@@ -179,7 +193,29 @@ function drawFuel(level, color) {
   ctx.shadowColor = color;
   ctx.shadowBlur = 14;
   ctx.fill();
+
+  /* bubbles */
+  for (const b of bubbles) {
+    const yPos = baseY - b.y;
+    if (yPos < baseY - h) continue;
+
+    ctx.beginPath();
+    ctx.arc(CENTER.x + b.x, yPos, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = bubbleColor;
+    ctx.globalAlpha = b.alpha;
+    ctx.fill();
+
+    b.y += b.speed;
+    b.x += b.drift;
+
+    if (b.y > h) {
+      Object.assign(b, createBubble());
+      b.y = 0;
+    }
+  }
+
   ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 /* ================= LOOP ================= */
@@ -201,7 +237,7 @@ function render() {
         0,
         Math.min(1, (latestData.weekly?.winrate || 0) / 100)
       );
-      drawFuel(winrate, colors.fuel);
+      drawFuel(winrate, colors.fuel, colors.bubble);
     }
   }
 
