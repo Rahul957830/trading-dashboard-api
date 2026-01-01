@@ -37,19 +37,17 @@ canvas {
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-const CENTER = {
-  x: canvas.width / 2,
-  y: canvas.height / 2
-};
-
+const CENTER = { x: canvas.width / 2, y: canvas.height / 2 };
 const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 let glowPhase = 0;
+let shimmerPhase = 0;
+let heatPhase = 0;
 let latestData = null;
 
-/* ================= FETCH ENGINE ================= */
+/* ================= FETCH ================= */
 async function fetchData() {
   try {
     const res = await fetch(
@@ -57,17 +55,16 @@ async function fetchData() {
       { cache: "no-store" }
     );
     latestData = await res.json();
-  } catch (e) {}
+  } catch {}
 }
-
 fetchData();
 setInterval(fetchData, 10000);
 
 /* ================= STATUS ================= */
-function getStatus(data) {
-  if (!data) return "INACTIVE";
-  if (data.weekly?.trades >= 1) return "ACTIVE";
-  if (data.monthly?.trades >= 1) return "IDLE";
+function getStatus(d) {
+  if (!d) return "INACTIVE";
+  if (d.weekly?.trades >= 1) return "ACTIVE";
+  if (d.monthly?.trades >= 1) return "IDLE";
   return "INACTIVE";
 }
 
@@ -80,7 +77,6 @@ function getColors(status) {
       fuel: "rgba(120,255,200,0.65)"
     };
   }
-
   if (status === "IDLE") {
     return {
       ring: "rgba(255,190,110,0.9)",
@@ -88,7 +84,6 @@ function getColors(status) {
       fuel: null
     };
   }
-
   return {
     ring: "rgba(170,170,170,0.9)",
     glow: "rgba(170,170,170,0.5)",
@@ -98,28 +93,23 @@ function getColors(status) {
 
 /* ================= INNER DEPTH ================= */
 function drawInnerDepth() {
-  const grad = ctx.createRadialGradient(
-    CENTER.x,
-    CENTER.y,
-    INNER_RADIUS * 0.3,
-    CENTER.x,
-    CENTER.y,
-    INNER_RADIUS
+  const g = ctx.createRadialGradient(
+    CENTER.x, CENTER.y, INNER_RADIUS * 0.3,
+    CENTER.x, CENTER.y, INNER_RADIUS
   );
+  g.addColorStop(0, "rgba(255,255,255,0.06)");
+  g.addColorStop(1, "rgba(0,0,0,0.35)");
 
-  grad.addColorStop(0, "rgba(255,255,255,0.06)");
-  grad.addColorStop(1, "rgba(0,0,0,0.35)");
-
-  ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
+  ctx.fillStyle = g;
   ctx.fill();
-  ctx.restore();
 }
 
-/* ================= RING (ENHANCED BREATHING GLOW) ================= */
-function drawRing(color, glow) {
+/* ================= RING ================= */
+function drawRing(color, glow, status) {
+  // constant breathing (no heartbeat sync)
+  glowPhase += 0.02;
   const breathing = 30 + Math.sin(glowPhase) * 10;
 
   ctx.save();
@@ -131,13 +121,31 @@ function drawRing(color, glow) {
   ctx.shadowBlur = breathing;
   ctx.stroke();
   ctx.restore();
+
+  /* Micro shimmer (ACTIVE only) */
+  if (status === "ACTIVE") {
+    shimmerPhase += 0.01;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(
+      CENTER.x,
+      CENTER.y,
+      RADIUS,
+      shimmerPhase,
+      shimmerPhase + Math.PI / 3
+    );
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
-  const fillHeight = INNER_RADIUS * 2 * level;
+  const h = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
 
   ctx.save();
@@ -145,22 +153,13 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
-  const gradient = ctx.createLinearGradient(
-    0,
-    baseY - fillHeight,
-    0,
-    baseY
-  );
-  gradient.addColorStop(0, "rgba(180,255,225,0.9)");
-  gradient.addColorStop(1, color);
-
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
-    const y =
-      Math.sin((x + waveOffset) * 0.045) * 3 +
-      (baseY - fillHeight);
+    const heat = Math.sin((x + heatPhase) * 0.08) * 1.5;
+    const wave = Math.sin((x + waveOffset) * 0.045) * 3;
+    const y = baseY - h + wave + heat;
     ctx.lineTo(CENTER.x + x, y);
   }
 
@@ -168,7 +167,11 @@ function drawFuel(level, color) {
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  ctx.fillStyle = gradient;
+  const grad = ctx.createLinearGradient(0, baseY - h, 0, baseY);
+  grad.addColorStop(0, "rgba(180,255,225,0.9)");
+  grad.addColorStop(1, color);
+
+  ctx.fillStyle = grad;
   ctx.shadowColor = color;
   ctx.shadowBlur = 12;
   ctx.fill();
@@ -181,13 +184,13 @@ function render() {
 
   const base = getColors("INACTIVE");
   drawInnerDepth();
-  drawRing(base.ring, base.glow);
+  drawRing(base.ring, base.glow, "INACTIVE");
 
   if (latestData) {
     const status = getStatus(latestData);
     const colors = getColors(status);
 
-    drawRing(colors.ring, colors.glow);
+    drawRing(colors.ring, colors.glow, status);
 
     if (status === "ACTIVE") {
       const winrate = Math.max(
@@ -199,7 +202,7 @@ function render() {
   }
 
   waveOffset += 0.4;
-  glowPhase += 0.02; // slightly faster breathing
+  heatPhase += 0.3;
   requestAnimationFrame(render);
 }
 
