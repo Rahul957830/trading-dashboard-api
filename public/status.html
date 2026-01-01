@@ -49,17 +49,23 @@ let boilPhase = 0;
 let latestData = null;
 
 /* ================= BUBBLES ================= */
-const bubbles = Array.from({ length: 8 }, () => createBubble());
+const bubbles = [];
+let lastBurst = 0;
 
-function createBubble() {
+function createBubble(yStart = 0) {
   return {
-    x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.8,
-    y: Math.random() * INNER_RADIUS * 2,
-    r: 1 + Math.random() * 1.5,
-    speed: 0.15 + Math.random() * 0.25,
-    drift: (Math.random() * 2 - 1) * 0.15,
-    alpha: 0.15 + Math.random() * 0.15
+    x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.75,
+    y: yStart,
+    r: 2 + Math.random() * 2,
+    speed: 0.35 + Math.random() * 0.6,
+    drift: (Math.random() * 2 - 1) * 0.2,
+    alpha: 0.35 + Math.random() * 0.2
   };
+}
+
+// initial bubbles
+for (let i = 0; i < 7; i++) {
+  bubbles.push(createBubble(Math.random() * INNER_RADIUS * 2));
 }
 
 /* ================= FETCH ================= */
@@ -90,7 +96,7 @@ function getColors(status) {
       ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,1)",
       fuel: "rgba(120,255,200,0.7)",
-      bubble: "rgba(200,255,235,0.6)"
+      bubble: "rgba(200,255,235,0.75)"
     };
   }
   if (status === "IDLE") {
@@ -139,7 +145,6 @@ function drawRing(color, glow, status) {
 
   if (status === "ACTIVE") {
     shimmerPhase += 0.008;
-    ctx.save();
     ctx.beginPath();
     ctx.arc(
       CENTER.x,
@@ -151,12 +156,11 @@ function drawRing(color, glow, status) {
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.restore();
   }
 }
 
 /* ================= FUEL + BUBBLES ================= */
-function drawFuel(level, color, bubbleColor) {
+function drawFuel(level, color, bubbleColor, status) {
   if (!color || level <= 0) return;
 
   const h = INNER_RADIUS * 2 * level;
@@ -195,22 +199,36 @@ function drawFuel(level, color, bubbleColor) {
   ctx.fill();
 
   /* bubbles */
-  for (const b of bubbles) {
-    const yPos = baseY - b.y;
-    if (yPos < baseY - h) continue;
+  if (status === "ACTIVE") {
+    const now = performance.now();
 
-    ctx.beginPath();
-    ctx.arc(CENTER.x + b.x, yPos, b.r, 0, Math.PI * 2);
-    ctx.fillStyle = bubbleColor;
-    ctx.globalAlpha = b.alpha;
-    ctx.fill();
+    // micro-burst every ~7–10s
+    if (now - lastBurst > 7000 + Math.random() * 3000) {
+      lastBurst = now;
+      for (let i = 0; i < 3; i++) {
+        bubbles.push(createBubble(0));
+      }
+    }
 
-    b.y += b.speed;
-    b.x += b.drift;
+    for (const b of bubbles) {
+      const yPos = baseY - b.y;
+      if (yPos < baseY - h) continue;
 
-    if (b.y > h) {
-      Object.assign(b, createBubble());
-      b.y = 0;
+      ctx.beginPath();
+      ctx.arc(CENTER.x + b.x, yPos, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = bubbleColor;
+      ctx.globalAlpha = b.alpha;
+      ctx.shadowColor = bubbleColor;
+      ctx.shadowBlur = 6;
+      ctx.fill();
+
+      b.y += b.speed;
+      b.x += b.drift;
+
+      // reset near surface
+      if (b.y > h * 0.95) {
+        Object.assign(b, createBubble(0));
+      }
     }
   }
 
@@ -237,7 +255,7 @@ function render() {
         0,
         Math.min(1, (latestData.weekly?.winrate || 0) / 100)
       );
-      drawFuel(winrate, colors.fuel, colors.bubble);
+      drawFuel(winrate, colors.fuel, colors.bubble, status);
     }
   }
 
