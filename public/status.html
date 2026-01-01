@@ -39,7 +39,7 @@ const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
 const CENTER = { x: 110, y: 90 };
-const RADIUS = 62;
+const RADIUS = 64;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
@@ -55,8 +55,8 @@ async function fetchData() {
 
 /* ================= STATUS LOGIC ================= */
 function getStatus(data) {
-  if (data.weekly.trades > 0) return "ACTIVE";
-  if (data.monthly.trades > 0) return "IDLE";
+  if (data.weekly && data.weekly.trades > 0) return "ACTIVE";
+  if (data.monthly && data.monthly.trades > 0) return "IDLE";
   return "INACTIVE";
 }
 
@@ -64,18 +64,18 @@ function getStatus(data) {
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(0,255,0,1)",
-      fuel: "rgba(120,255,195,0.55)"
+      ring: "rgba(110,255,200,1)",
+      fuel: "rgba(110,255,200,0.65)"
     };
   }
   if (status === "IDLE") {
     return {
-      ring: "rgba(150,150,150,0.55)",
-      fuel: "rgba(150,150,150,0.25)"
+      ring: "rgba(190,190,190,0.75)",
+      fuel: "rgba(190,190,190,0.35)"
     };
   }
   return {
-    ring: "rgba(220,160,110,0.55)",
+    ring: "rgba(255,170,90,0.7)",
     fuel: null
   };
 }
@@ -88,7 +88,7 @@ function drawRing(color) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 6;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 24;
+  ctx.shadowBlur = 32;
   ctx.stroke();
   ctx.restore();
 }
@@ -121,31 +121,36 @@ function drawFuel(level, color) {
 
   ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 14;
   ctx.fill();
   ctx.restore();
 }
 
-/* ================= LOOP ================= */
+/* ================= MAIN LOOP ================= */
 async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* 1️⃣ ALWAYS draw fallback ring (IDLE) */
+  const fallback = getColors("IDLE");
+  drawRing(fallback.ring);
 
   try {
     const data = await fetchData();
     const status = getStatus(data);
     const colors = getColors(status);
 
+    /* redraw ring with real status */
     drawRing(colors.ring);
 
     if (status !== "INACTIVE") {
       const winrate = Math.max(
         0,
-        Math.min(1, data.weekly.winrate / 100)
+        Math.min(1, (data.weekly?.winrate || 0) / 100)
       );
       drawFuel(winrate, colors.fuel);
     }
-  } catch {
-    // silent fail – calm by design
+  } catch (e) {
+    /* silent fail by design */
   }
 
   waveOffset += 0.6;
