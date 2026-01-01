@@ -45,6 +45,7 @@ let waveOffset = 0;
 let glowPhase = 0;
 let shimmerPhase = 0;
 let heatPhase = 0;
+let boilPhase = 0;
 let latestData = null;
 
 /* ================= FETCH ================= */
@@ -74,7 +75,7 @@ function getColors(status) {
     return {
       ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,1)",
-      fuel: "rgba(120,255,200,0.65)"
+      fuel: "rgba(120,255,200,0.7)"
     };
   }
   if (status === "IDLE") {
@@ -109,7 +110,7 @@ function drawInnerDepth() {
 /* ================= RING ================= */
 function drawRing(color, glow, status) {
   glowPhase += 0.02;
-  const breathing = 30 + Math.sin(glowPhase) * 10;
+  const breathing = 30 + Math.sin(glowPhase) * 12;
 
   ctx.save();
   ctx.beginPath();
@@ -121,31 +122,37 @@ function drawRing(color, glow, status) {
   ctx.stroke();
   ctx.restore();
 
-  /* 🔹 Micro shimmer (ACTIVE only) */
+  /* ✨ STRONG SHIMMER — ACTIVE ONLY */
   if (status === "ACTIVE") {
-    shimmerPhase += 0.018;
+    shimmerPhase += 0.012;
+
     ctx.save();
+    ctx.globalCompositeOperation = "lighter";
     ctx.beginPath();
     ctx.arc(
       CENTER.x,
       CENTER.y,
       RADIUS,
       shimmerPhase,
-      shimmerPhase + Math.PI / 2.2
+      shimmerPhase + Math.PI / 1.6
     );
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "rgba(255,255,255,0.8)";
+    ctx.shadowBlur = 12;
     ctx.stroke();
     ctx.restore();
   }
 }
 
-/* ================= FUEL ================= */
+/* ================= FUEL (ELEGANT BOIL) ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
   const h = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
+
+  boilPhase += 0.01;
 
   ctx.save();
   ctx.beginPath();
@@ -156,9 +163,16 @@ function drawFuel(level, color) {
   ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
-    const heat = Math.sin((x + heatPhase) * 0.08) * 1.5;
-    const wave = Math.sin((x + waveOffset) * 0.045) * 3;
-    const y = baseY - h + wave + heat;
+    const wave =
+      Math.sin((x + waveOffset) * 0.045) * 3;
+
+    const heat =
+      Math.sin((x * 0.12) + heatPhase) * 2;
+
+    const convection =
+      Math.sin(boilPhase + x * 0.03) * 1.5;
+
+    const y = baseY - h + wave + heat + convection;
     ctx.lineTo(CENTER.x + x, y);
   }
 
@@ -167,12 +181,12 @@ function drawFuel(level, color) {
   ctx.closePath();
 
   const grad = ctx.createLinearGradient(0, baseY - h, 0, baseY);
-  grad.addColorStop(0, "rgba(180,255,225,0.9)");
+  grad.addColorStop(0, "rgba(200,255,235,0.95)");
   grad.addColorStop(1, color);
 
   ctx.fillStyle = grad;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 14;
   ctx.fill();
   ctx.restore();
 }
@@ -200,8 +214,9 @@ function render() {
     }
   }
 
-  waveOffset += 0.4;
-  heatPhase += 0.3;
+  waveOffset += 0.35;
+  heatPhase += 0.04;
+
   requestAnimationFrame(render);
 }
 
