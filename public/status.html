@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>System Status Core (Debug)</title>
+<title>System Status Core</title>
 
 <style>
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent !important;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -22,8 +22,9 @@ html, body {
 }
 
 canvas {
+  width: 220px;
+  height: 180px;
   display: block;
-  background: transparent;
 }
 </style>
 </head>
@@ -31,18 +32,30 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status" width="220" height="180"></canvas>
+  <canvas id="status"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
-const ctx = canvas.getContext("2d", { alpha: true });
+const ctx = canvas.getContext("2d");
 
-const CENTER = { x: 110, y: 90 };
+const DPR = window.devicePixelRatio || 1;
+
+// Logical size (CSS)
+const WIDTH = 220;
+const HEIGHT = 180;
+
+// Physical buffer
+canvas.width = WIDTH * DPR;
+canvas.height = HEIGHT * DPR;
+ctx.scale(DPR, DPR);
+
+const CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
 const RADIUS = 64;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
+let lastData = null;
 
 /* ================= FETCH ================= */
 async function fetchData() {
@@ -66,12 +79,12 @@ function getColors(status) {
     return { ring: "rgba(110,255,200,1)", fuel: "rgba(110,255,200,0.65)" };
   }
   if (status === "IDLE") {
-    return { ring: "rgba(180,180,180,0.75)", fuel: "rgba(180,180,180,0.12)" };
+    return { ring: "rgba(180,180,180,0.7)", fuel: "rgba(180,180,180,0.12)" };
   }
   return { ring: "rgba(255,170,90,0.75)", fuel: null };
 }
 
-/* ================= RING ================= */
+/* ================= DRAW ================= */
 function drawRing(color) {
   ctx.save();
   ctx.beginPath();
@@ -84,7 +97,6 @@ function drawRing(color) {
   ctx.restore();
 }
 
-/* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
@@ -117,52 +129,36 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= LOOP ================= */
-async function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function render() {
+  ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  // base ring
-  drawRing(getColors("IDLE").ring);
+  const data = lastData;
+  const status = getStatus(data || {});
+  const colors = getColors(status);
 
-  let debugText = "NO DATA";
+  drawRing(colors.ring);
 
-  try {
-    const data = await fetchData();
-
-    debugText =
-      `weekly:${data?.weekly?.trades ?? "?"}  ` +
-      `monthly:${data?.monthly?.trades ?? "?"}  ` +
-      `wr:${data?.weekly?.winrate ?? "?"}`;
-
-    const status = getStatus(data);
-    const colors = getColors(status);
-
-    drawRing(colors.ring);
-
-    if (status === "ACTIVE") {
-      drawFuel(Math.max(0, Math.min(1, data.weekly.winrate / 100)), colors.fuel);
-    }
-
-  } catch (e) {
-    debugText = "FETCH ERROR";
+  if (status === "ACTIVE" && data) {
+    drawFuel(Math.min(1, (data.weekly.winrate || 0) / 100), colors.fuel);
   }
 
-  /* 🔍 DEBUG PANEL (VISIBLE) */
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(CENTER.x - 70, CENTER.y - 10, 140, 20);
-
-  ctx.font = "12px monospace";
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.fillText(debugText, CENTER.x, CENTER.y + 5);
-  ctx.restore();
-
   waveOffset += 0.6;
-  requestAnimationFrame(render);
 }
 
-render();
+/* ================= LOOP ================= */
+
+// Render at fixed FPS (stable in Notion)
+setInterval(render, 50);
+
+// Fetch data slower
+async function poll() {
+  try {
+    lastData = await fetchData();
+  } catch {}
+  setTimeout(poll, 4000);
+}
+
+poll();
 </script>
 
 </body>
