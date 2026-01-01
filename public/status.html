@@ -12,17 +12,14 @@ html, body {
   overflow: hidden;
 }
 
-/* Fixed widget footprint for Notion */
 .container {
   width: 260px;
   height: 190px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
 }
 
-/* Canvas with invisible buffer for glow */
 canvas {
   display: block;
   background: transparent;
@@ -33,7 +30,7 @@ canvas {
 <body>
 
 <div class="container">
-  <!-- Larger canvas to avoid glow clipping -->
+  <!-- Bigger canvas so glow is never clipped -->
   <canvas id="status" width="260" height="220"></canvas>
 </div>
 
@@ -41,31 +38,35 @@ canvas {
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-/* TRUE visual center */
 const CENTER = { x: 130, y: 110 };
 const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
+let latestData = null;
 
-/* ================= FETCH ENGINE ================= */
+/* ================= FETCH ENGINE (SLOW) ================= */
 async function fetchData() {
-  const res = await fetch(
-    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
-    { cache: "no-store" }
-  );
-  return res.json();
+  try {
+    const res = await fetch(
+      "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    latestData = await res.json();
+  } catch (e) {
+    // keep last known data (offline-safe)
+  }
 }
 
+// initial + interval fetch
+fetchData();
+setInterval(fetchData, 10000);
+
 /* ================= STATUS LOGIC ================= */
-/*
-ACTIVE   → weekly.trades >= 1
-IDLE     → weekly.trades === 0 AND monthly.trades >= 1
-INACTIVE → no monthly trades
-*/
 function getStatus(data) {
-  if (data.weekly && data.weekly.trades >= 1) return "ACTIVE";
-  if (data.monthly && data.monthly.trades >= 1) return "IDLE";
+  if (!data) return "INACTIVE";
+  if (data.weekly?.trades >= 1) return "ACTIVE";
+  if (data.monthly?.trades >= 1) return "IDLE";
   return "INACTIVE";
 }
 
@@ -77,17 +78,14 @@ function getColors(status) {
       fuel: "rgba(110,255,200,0.65)"
     };
   }
-
   if (status === "IDLE") {
     return {
-      ring: "rgba(190,190,190,0.7)",
+      ring: "rgba(255,190,110,0.85)",
       fuel: null
     };
   }
-
-  /* INACTIVE */
   return {
-    ring: "rgba(255,170,90,0.65)",
+    ring: "rgba(170,170,170,0.75)",
     fuel: null
   };
 }
@@ -98,16 +96,16 @@ function drawRing(color) {
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 8;              // thicker ring
+  ctx.lineWidth = 8;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 36;            // strong but clean glow
+  ctx.shadowBlur = 36;
   ctx.stroke();
   ctx.restore();
 }
 
-/* ================= FUEL ================= */
+/* ================= FUEL (ACTIVE ONLY) ================= */
 function drawFuel(level, color) {
-  if (!color || level <= 0) return;
+  if (!color) return;
 
   const fillHeight = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
@@ -138,30 +136,21 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= MAIN LOOP ================= */
-async function render() {
+/* ================= RENDER LOOP (FAST, SAFE) ================= */
+function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  /* Fallback IDLE ring (safe default) */
-  drawRing("rgba(190,190,190,0.6)");
+  const status = getStatus(latestData);
+  const colors = getColors(status);
 
-  try {
-    const data = await fetchData();
-    const status = getStatus(data);
-    const colors = getColors(status);
+  drawRing(colors.ring);
 
-    drawRing(colors.ring);
-
-    if (status === "ACTIVE") {
-      const winrate =
-        data.weekly && data.weekly.trades >= 1
-          ? Math.max(0, Math.min(1, (data.weekly.winrate || 0) / 100))
-          : 0;
-
-      drawFuel(winrate, colors.fuel);
-    }
-  } catch (e) {
-    /* Silent fail by design */
+  if (status === "ACTIVE" && latestData) {
+    const winrate = Math.max(
+      0,
+      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
+    );
+    drawFuel(winrate, colors.fuel);
   }
 
   waveOffset += 0.6;
