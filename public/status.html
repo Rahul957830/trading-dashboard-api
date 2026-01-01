@@ -48,31 +48,25 @@ let heatPhase = 0;
 let boilPhase = 0;
 let latestData = null;
 
-/* ================= BUBBLES ================= */
+/* ================= BUBBLES (MINIMAL) ================= */
 const bubbles = [];
 let lastBurst = 0;
 
 function createBubble({ burst = false } = {}) {
   return {
-    x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.6,
-    y: Math.random() * INNER_RADIUS * 0.3,
-    r: burst
-      ? 1.2 + Math.random() * 0.6
-      : 1.4 + Math.random() * 0.8,
-    speed: burst
-      ? 0.35 + Math.random() * 0.2
-      : 0.12 + Math.random() * 0.1,
-    drift: (Math.random() * 2 - 1) * 0.06,
-    alpha: burst
-      ? 0.22 + Math.random() * 0.15
-      : 0.16 + Math.random() * 0.06,
+    x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.55,
+    y: Math.random() * INNER_RADIUS * 0.2,
+    r: burst ? 1.1 + Math.random() * 0.4 : 1.2 + Math.random() * 0.5,
+    speed: burst ? 0.28 + Math.random() * 0.12 : 0.1 + Math.random() * 0.08,
+    drift: (Math.random() * 2 - 1) * 0.04,
+    alpha: burst ? 0.22 : 0.12,
     burst,
     life: 1
   };
 }
 
-// base bubbles
-for (let i = 0; i < 4; i++) bubbles.push(createBubble());
+// only 3 base bubbles
+for (let i = 0; i < 3; i++) bubbles.push(createBubble());
 
 /* ================= FETCH ================= */
 async function fetchData() {
@@ -102,7 +96,7 @@ function getColors(status) {
       ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,1)",
       fuel: "rgba(120,255,200,0.7)",
-      bubble: "rgba(200,255,235,0.8)"
+      bubble: "rgba(160,220,205,1)" // coolant-tinted, not white
     };
   }
   if (status === "IDLE") {
@@ -159,13 +153,13 @@ function drawRing(color, glow, status) {
       shimmerPhase,
       shimmerPhase + Math.PI / 6
     );
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
   }
 }
 
-/* ================= FUEL + BURST BUBBLES ================= */
+/* ================= FUEL + CLEAN BUBBLES ================= */
 function drawFuel(level, color, bubbleColor, status) {
   if (!color || level <= 0) return;
 
@@ -188,8 +182,7 @@ function drawFuel(level, color, bubbleColor, status) {
     const wave = Math.sin((x + waveOffset) * 0.045) * 3;
     const heat = Math.sin((x * 0.12) + heatPhase) * 2;
     const convection = Math.sin(boilPhase + x * 0.03) * 1.5;
-    const y = surfaceY + wave + heat + convection;
-    ctx.lineTo(CENTER.x + x, y);
+    ctx.lineTo(CENTER.x + x, surfaceY + wave + heat + convection);
   }
 
   ctx.lineTo(CENTER.x + INNER_RADIUS, baseY);
@@ -208,35 +201,31 @@ function drawFuel(level, color, bubbleColor, status) {
   if (status === "ACTIVE") {
     const now = performance.now();
 
-    // noticeable micro-burst
-    if (now - lastBurst > 8000 + Math.random() * 4000) {
+    // very soft burst (mostly above surface)
+    if (now - lastBurst > 9000 + Math.random() * 5000) {
       lastBurst = now;
-      const burstCount = 5 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < burstCount; i++) {
-        bubbles.push(createBubble({ burst: true }));
-      }
+      bubbles.push(createBubble({ burst: true }), createBubble({ burst: true }));
     }
 
     for (const b of bubbles) {
       const yPos = baseY - b.y;
 
+      // hide most bubbles inside coolant
+      if (!b.burst && yPos < surfaceY + 12) continue;
+
       ctx.globalAlpha = b.alpha * b.life;
       ctx.beginPath();
       ctx.arc(CENTER.x + b.x, yPos, b.r, 0, Math.PI * 2);
       ctx.fillStyle = bubbleColor;
-      ctx.shadowColor = bubbleColor;
-      ctx.shadowBlur = 4;
       ctx.fill();
 
       b.y += b.speed;
       b.x += b.drift;
 
-      // allow burst bubbles to rise slightly above surface
-      if (b.burst && yPos < surfaceY - 8) {
-        b.life -= 0.08;
-      }
+      // fade quickly above surface
+      if (b.burst && yPos < surfaceY - 6) b.life -= 0.15;
 
-      if (b.life <= 0 || b.y > h + 12) {
+      if (b.life <= 0 || b.y > h + 16) {
         Object.assign(b, createBubble());
       }
     }
