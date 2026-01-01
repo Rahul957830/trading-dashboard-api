@@ -35,7 +35,6 @@ canvas {
 </div>
 
 <script>
-/* ================= CANVAS ================= */
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
@@ -45,7 +44,7 @@ const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 
-/* ================= FETCH ENGINE ================= */
+/* ================= FETCH ================= */
 async function fetchData() {
   const res = await fetch(
     "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
@@ -54,7 +53,7 @@ async function fetchData() {
   return res.json();
 }
 
-/* ================= STATUS LOGIC ================= */
+/* ================= STATUS ================= */
 function getStatus(data) {
   if (data?.weekly?.trades >= 1) return "ACTIVE";
   if (data?.monthly?.trades >= 1) return "IDLE";
@@ -69,15 +68,12 @@ function getColors(status) {
       fuel: "rgba(110,255,200,0.65)"
     };
   }
-
   if (status === "IDLE") {
     return {
       ring: "rgba(180,180,180,0.75)",
-      fuel: "rgba(180,180,180,0.12)" // barely visible
+      fuel: "rgba(180,180,180,0.12)"
     };
   }
-
-  // INACTIVE
   return {
     ring: "rgba(255,170,90,0.75)",
     fuel: null
@@ -130,15 +126,20 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= MAIN LOOP ================= */
+/* ================= LOOP ================= */
 async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ✅ ALWAYS draw base IDLE ring
+  const idleColors = getColors("IDLE");
+  drawRing(idleColors.ring);
 
   try {
     const data = await fetchData();
     const status = getStatus(data);
     const colors = getColors(status);
 
+    // overwrite with real status
     drawRing(colors.ring);
 
     if (status === "ACTIVE") {
@@ -148,13 +149,8 @@ async function render() {
       );
       drawFuel(winrate, colors.fuel);
     }
-
-    if (status === "IDLE") {
-      drawFuel(0, colors.fuel); // intentional empty fuel
-    }
-
   } catch (e) {
-    // silent by design
+    // silent fail, base ring stays visible
   }
 
   waveOffset += 0.6;
