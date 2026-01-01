@@ -122,24 +122,21 @@ function drawRing(color, glow, status) {
   ctx.stroke();
   ctx.restore();
 
-  /* ✨ STRONG SHIMMER — ACTIVE ONLY */
+  /* 🔹 Soft shimmer (ACTIVE only, polished look) */
   if (status === "ACTIVE") {
-    shimmerPhase += 0.012;
+    shimmerPhase += 0.008;
 
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
     ctx.beginPath();
     ctx.arc(
       CENTER.x,
       CENTER.y,
       RADIUS,
       shimmerPhase,
-      shimmerPhase + Math.PI / 1.6
+      shimmerPhase + Math.PI / 6
     );
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 4;
-    ctx.shadowColor = "rgba(255,255,255,0.8)";
-    ctx.shadowBlur = 12;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.restore();
   }
@@ -163,15 +160,9 @@ function drawFuel(level, color) {
   ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
-    const wave =
-      Math.sin((x + waveOffset) * 0.045) * 3;
-
-    const heat =
-      Math.sin((x * 0.12) + heatPhase) * 2;
-
-    const convection =
-      Math.sin(boilPhase + x * 0.03) * 1.5;
-
+    const wave = Math.sin((x + waveOffset) * 0.045) * 3;
+    const heat = Math.sin((x * 0.12) + heatPhase) * 2;
+    const convection = Math.sin(boilPhase + x * 0.03) * 1.5;
     const y = baseY - h + wave + heat + convection;
     ctx.lineTo(CENTER.x + x, y);
   }
