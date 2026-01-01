@@ -42,17 +42,29 @@ const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 
-/* ================= FETCH ================= */
+/* ================= DATA CACHE ================= */
+let latestData = null;
+
+/* ================= FETCH (EVERY 10s) ================= */
 async function fetchData() {
-  const res = await fetch(
-    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
-    { cache: "no-store" }
-  );
-  return res.json();
+  try {
+    const res = await fetch(
+      "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    latestData = await res.json();
+  } catch (e) {
+    // keep last known data
+  }
 }
+
+// initial + interval fetch
+fetchData();
+setInterval(fetchData, 10000);
 
 /* ================= STATUS ================= */
 function getStatus(data) {
+  if (!data) return "INACTIVE";
   if (data.weekly?.trades >= 1) return "ACTIVE";
   if (data.monthly?.trades >= 1) return "IDLE";
   return "INACTIVE";
@@ -78,7 +90,7 @@ function getColors(status) {
   };
 }
 
-/* ================= RING ================= */
+/* ================= DRAW RING ================= */
 function drawRing(color) {
   ctx.save();
   ctx.beginPath();
@@ -91,7 +103,7 @@ function drawRing(color) {
   ctx.restore();
 }
 
-/* ================= FUEL ================= */
+/* ================= DRAW FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
@@ -124,27 +136,21 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= LOOP ================= */
-async function render() {
+/* ================= RENDER LOOP ================= */
+function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  try {
-    const data = await fetchData();
-    const status = getStatus(data);
-    const colors = getColors(status);
+  const status = getStatus(latestData);
+  const colors = getColors(status);
 
-    drawRing(colors.ring);
+  drawRing(colors.ring);
 
-    if (status === "ACTIVE") {
-      const winrate = Math.max(
-        0,
-        Math.min(1, (data.weekly?.winrate || 0) / 100)
-      );
-      drawFuel(winrate, colors.fuel);
-    }
-
-  } catch (e) {
-    drawRing("rgba(170,170,170,0.6)");
+  if (status === "ACTIVE" && latestData) {
+    const winrate = Math.max(
+      0,
+      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
+    );
+    drawFuel(winrate, colors.fuel);
   }
 
   waveOffset += 0.6;
