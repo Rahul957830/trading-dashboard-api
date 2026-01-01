@@ -35,7 +35,6 @@ canvas {
 </div>
 
 <script>
-/* ================= CANVAS ================= */
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
@@ -45,7 +44,7 @@ const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 
-/* ================= FETCH ENGINE ================= */
+/* ================= FETCH ================= */
 async function fetchData() {
   const res = await fetch(
     "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
@@ -54,7 +53,7 @@ async function fetchData() {
   return res.json();
 }
 
-/* ================= STATUS LOGIC ================= */
+/* ================= STATUS ================= */
 function getStatus(data) {
   if (data?.weekly?.trades >= 1) return "ACTIVE";
   if (data?.monthly?.trades >= 1) return "IDLE";
@@ -64,23 +63,12 @@ function getStatus(data) {
 /* ================= COLORS ================= */
 function getColors(status) {
   if (status === "ACTIVE") {
-    return {
-      ring: "rgba(110,255,200,1)",
-      fuel: "rgba(110,255,200,0.65)"
-    };
+    return { ring: "rgba(110,255,200,1)", fuel: "rgba(110,255,200,0.65)" };
   }
-
   if (status === "IDLE") {
-    return {
-      ring: "rgba(180,180,180,0.75)",
-      fuel: "rgba(180,180,180,0.12)"
-    };
+    return { ring: "rgba(180,180,180,0.75)", fuel: "rgba(180,180,180,0.12)" };
   }
-
-  return {
-    ring: "rgba(255,170,90,0.75)",
-    fuel: null
-  };
+  return { ring: "rgba(255,170,90,0.75)", fuel: null };
 }
 
 /* ================= RING ================= */
@@ -129,52 +117,45 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= MAIN LOOP (DEBUG) ================= */
+/* ================= LOOP ================= */
 async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Always show IDLE base ring
-  const idleColors = getColors("IDLE");
-  drawRing(idleColors.ring);
+  // base ring
+  drawRing(getColors("IDLE").ring);
 
   let debugText = "NO DATA";
 
   try {
     const data = await fetchData();
 
-    const weeklyTrades = data?.weekly?.trades ?? "undefined";
-    const monthlyTrades = data?.monthly?.trades ?? "undefined";
-    const weeklyWinrate = data?.weekly?.winrate ?? "n/a";
-
     debugText =
-      `weekly:${weeklyTrades} | ` +
-      `monthly:${monthlyTrades} | ` +
-      `wr:${weeklyWinrate}`;
+      `weekly:${data?.weekly?.trades ?? "?"}  ` +
+      `monthly:${data?.monthly?.trades ?? "?"}  ` +
+      `wr:${data?.weekly?.winrate ?? "?"}`;
 
     const status = getStatus(data);
     const colors = getColors(status);
 
-    // overwrite ring with real status
     drawRing(colors.ring);
 
     if (status === "ACTIVE") {
-      const winrate = Math.max(
-        0,
-        Math.min(1, (data.weekly.winrate || 0) / 100)
-      );
-      drawFuel(winrate, colors.fuel);
+      drawFuel(Math.max(0, Math.min(1, data.weekly.winrate / 100)), colors.fuel);
     }
 
   } catch (e) {
     debugText = "FETCH ERROR";
   }
 
-  // 🔍 DEBUG OVERLAY
+  /* 🔍 DEBUG PANEL (VISIBLE) */
   ctx.save();
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(CENTER.x - 70, CENTER.y - 10, 140, 20);
+
+  ctx.font = "12px monospace";
+  ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
-  ctx.fillText(debugText, CENTER.x, canvas.height - 8);
+  ctx.fillText(debugText, CENTER.x, CENTER.y + 5);
   ctx.restore();
 
   waveOffset += 0.6;
