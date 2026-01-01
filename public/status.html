@@ -37,15 +37,13 @@ const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d");
 
 const CENTER = { x: 110, y: 90 };
-const RADIUS = 64;
+const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
-
-/* ================= DATA CACHE ================= */
 let latestData = null;
 
-/* ================= FETCH (EVERY 10s) ================= */
+/* ================= FETCH ENGINE ================= */
 async function fetchData() {
   try {
     const res = await fetch(
@@ -53,12 +51,8 @@ async function fetchData() {
       { cache: "no-store" }
     );
     latestData = await res.json();
-  } catch (e) {
-    // keep last known data
-  }
+  } catch (e) {}
 }
-
-// initial + interval fetch
 fetchData();
 setInterval(fetchData, 10000);
 
@@ -74,36 +68,39 @@ function getStatus(data) {
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(110,255,200,1)",
-      fuel: "rgba(110,255,200,0.65)"
+      ring: "rgba(120,255,200,1)",
+      glow: "rgba(120,255,200,0.9)",
+      fuel: "rgba(120,255,200,0.65)"
     };
   }
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,180,90,0.85)",
+      ring: "rgba(255,190,110,0.85)",
+      glow: "rgba(255,190,110,0.45)",
       fuel: null
     };
   }
   return {
-    ring: "rgba(170,170,170,0.75)",
+    ring: "rgba(170,170,170,0.8)",
+    glow: "rgba(170,170,170,0.35)",
     fuel: null
   };
 }
 
-/* ================= DRAW RING ================= */
-function drawRing(color) {
+/* ================= RING ================= */
+function drawRing(color, glow) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 7;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 28;
+  ctx.lineWidth = 8;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 30;
   ctx.stroke();
   ctx.restore();
 }
 
-/* ================= DRAW FUEL ================= */
+/* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
@@ -115,12 +112,21 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
+  const gradient = ctx.createLinearGradient(
+    0,
+    baseY - fillHeight,
+    0,
+    baseY
+  );
+  gradient.addColorStop(0, "rgba(180,255,225,0.9)");
+  gradient.addColorStop(1, color);
+
   ctx.beginPath();
   ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
-      Math.sin((x + waveOffset) * 0.05) * 4 +
+      Math.sin((x + waveOffset) * 0.045) * 3 +
       (baseY - fillHeight);
     ctx.lineTo(CENTER.x + x, y);
   }
@@ -129,9 +135,9 @@ function drawFuel(level, color) {
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  ctx.fillStyle = color;
+  ctx.fillStyle = gradient;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 12;
   ctx.fill();
   ctx.restore();
 }
@@ -143,7 +149,7 @@ function render() {
   const status = getStatus(latestData);
   const colors = getColors(status);
 
-  drawRing(colors.ring);
+  drawRing(colors.ring, colors.glow);
 
   if (status === "ACTIVE" && latestData) {
     const winrate = Math.max(
@@ -153,7 +159,7 @@ function render() {
     drawFuel(winrate, colors.fuel);
   }
 
-  waveOffset += 0.6;
+  waveOffset += 0.4;
   requestAnimationFrame(render);
 }
 
