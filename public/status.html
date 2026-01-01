@@ -55,8 +55,8 @@ async function fetchData() {
 
 /* ================= STATUS LOGIC ================= */
 function getStatus(data) {
-  if (data.weekly && data.weekly.trades > 0) return "ACTIVE";
-  if (data.monthly && data.monthly.trades > 0) return "IDLE";
+  if (data.weekly?.trades > 0) return "ACTIVE";
+  if (data.monthly?.trades > 0) return "IDLE";
   return "INACTIVE";
 }
 
@@ -70,12 +70,12 @@ function getColors(status) {
   }
   if (status === "IDLE") {
     return {
-      ring: "rgba(190,190,190,0.75)",
-      fuel: "rgba(190,190,190,0.35)"
+      ring: "rgba(180,180,180,0.7)",
+      fuel: "rgba(180,180,180,0.25)"
     };
   }
   return {
-    ring: "rgba(255,170,90,0.7)",
+    ring: "rgba(255,170,90,0.75)",
     fuel: null
   };
 }
@@ -86,9 +86,9 @@ function drawRing(color) {
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 7;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 32;
+  ctx.shadowBlur = 30;
   ctx.stroke();
   ctx.restore();
 }
@@ -121,7 +121,7 @@ function drawFuel(level, color) {
 
   ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 12;
   ctx.fill();
   ctx.restore();
 }
@@ -130,27 +130,26 @@ function drawFuel(level, color) {
 async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  /* 1️⃣ ALWAYS draw fallback ring (IDLE) */
-  const fallback = getColors("IDLE");
-  drawRing(fallback.ring);
+  // fallback idle ring
+  drawRing(getColors("IDLE").ring);
 
   try {
     const data = await fetchData();
     const status = getStatus(data);
     const colors = getColors(status);
 
-    /* redraw ring with real status */
     drawRing(colors.ring);
 
-    if (status !== "INACTIVE") {
+    // 🔒 FUEL RULE ENFORCEMENT
+    if (status === "ACTIVE" && data.weekly.trades > 0) {
       const winrate = Math.max(
         0,
-        Math.min(1, (data.weekly?.winrate || 0) / 100)
+        Math.min(1, (data.weekly.winrate || 0) / 100)
       );
       drawFuel(winrate, colors.fuel);
     }
   } catch (e) {
-    /* silent fail by design */
+    // silent by design
   }
 
   waveOffset += 0.6;
