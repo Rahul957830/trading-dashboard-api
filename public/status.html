@@ -12,15 +12,19 @@ html, body {
   overflow: hidden;
 }
 
+/* Fixed widget footprint for Notion */
 .container {
   width: 260px;
   height: 190px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 }
 
+/* Canvas with invisible buffer for glow */
 canvas {
+  display: block;
   background: transparent;
 }
 </style>
@@ -29,38 +33,39 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status" width="220" height="180"></canvas>
+  <!-- Larger canvas to avoid glow clipping -->
+  <canvas id="status" width="260" height="220"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: true });
 
-const CENTER = { x: 110, y: 90 };
+/* TRUE visual center */
+const CENTER = { x: 130, y: 110 };
 const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
-let latestData = null;
 
 /* ================= FETCH ENGINE ================= */
 async function fetchData() {
-  try {
-    const res = await fetch(
-      "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
-      { cache: "no-store" }
-    );
-    latestData = await res.json();
-  } catch (e) {}
+  const res = await fetch(
+    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+    { cache: "no-store" }
+  );
+  return res.json();
 }
-fetchData();
-setInterval(fetchData, 10000);
 
-/* ================= STATUS ================= */
+/* ================= STATUS LOGIC ================= */
+/*
+ACTIVE   → weekly.trades >= 1
+IDLE     → weekly.trades === 0 AND monthly.trades >= 1
+INACTIVE → no monthly trades
+*/
 function getStatus(data) {
-  if (!data) return "INACTIVE";
-  if (data.weekly?.trades >= 1) return "ACTIVE";
-  if (data.monthly?.trades >= 1) return "IDLE";
+  if (data.weekly && data.weekly.trades >= 1) return "ACTIVE";
+  if (data.monthly && data.monthly.trades >= 1) return "IDLE";
   return "INACTIVE";
 }
 
@@ -68,34 +73,34 @@ function getStatus(data) {
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(120,255,200,1)",
-      glow: "rgba(120,255,200,0.9)",
-      fuel: "rgba(120,255,200,0.65)"
+      ring: "rgba(110,255,200,1)",
+      fuel: "rgba(110,255,200,0.65)"
     };
   }
+
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,190,110,0.85)",
-      glow: "rgba(255,190,110,0.45)",
+      ring: "rgba(190,190,190,0.7)",
       fuel: null
     };
   }
+
+  /* INACTIVE */
   return {
-    ring: "rgba(170,170,170,0.8)",
-    glow: "rgba(170,170,170,0.35)",
+    ring: "rgba(255,170,90,0.65)",
     fuel: null
   };
 }
 
 /* ================= RING ================= */
-function drawRing(color, glow) {
+function drawRing(color) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 8;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 30;
+  ctx.lineWidth = 8;              // thicker ring
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 36;            // strong but clean glow
   ctx.stroke();
   ctx.restore();
 }
@@ -112,21 +117,12 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
-  const gradient = ctx.createLinearGradient(
-    0,
-    baseY - fillHeight,
-    0,
-    baseY
-  );
-  gradient.addColorStop(0, "rgba(180,255,225,0.9)");
-  gradient.addColorStop(1, color);
-
   ctx.beginPath();
   ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
-      Math.sin((x + waveOffset) * 0.045) * 3 +
+      Math.sin((x + waveOffset) * 0.05) * 4 +
       (baseY - fillHeight);
     ctx.lineTo(CENTER.x + x, y);
   }
@@ -135,31 +131,40 @@ function drawFuel(level, color) {
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 16;
   ctx.fill();
   ctx.restore();
 }
 
-/* ================= RENDER LOOP ================= */
-function render() {
+/* ================= MAIN LOOP ================= */
+async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const status = getStatus(latestData);
-  const colors = getColors(status);
+  /* Fallback IDLE ring (safe default) */
+  drawRing("rgba(190,190,190,0.6)");
 
-  drawRing(colors.ring, colors.glow);
+  try {
+    const data = await fetchData();
+    const status = getStatus(data);
+    const colors = getColors(status);
 
-  if (status === "ACTIVE" && latestData) {
-    const winrate = Math.max(
-      0,
-      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
-    );
-    drawFuel(winrate, colors.fuel);
+    drawRing(colors.ring);
+
+    if (status === "ACTIVE") {
+      const winrate =
+        data.weekly && data.weekly.trades >= 1
+          ? Math.max(0, Math.min(1, (data.weekly.winrate || 0) / 100))
+          : 0;
+
+      drawFuel(winrate, colors.fuel);
+    }
+  } catch (e) {
+    /* Silent fail by design */
   }
 
-  waveOffset += 0.4;
+  waveOffset += 0.6;
   requestAnimationFrame(render);
 }
 
