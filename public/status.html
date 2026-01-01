@@ -18,11 +18,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 }
 
 canvas {
-  background: transparent;
   display: block;
+  background: transparent;
 }
 </style>
 </head>
@@ -30,21 +31,20 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status" width="240" height="190"></canvas>
+  <canvas id="status" width="220" height="180"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-const CENTER = { x: 120, y: 95 };
-const RADIUS = 68;
-const INNER_RADIUS = 54;
+const CENTER = { x: 110, y: 90 };
+const RADIUS = 66;
+const INNER_RADIUS = 52;
 
 let waveOffset = 0;
-let mistOffset = 0;
 
-/* ================= FETCH ENGINE ================= */
+/* ================= FETCH ================= */
 async function fetchData() {
   const res = await fetch(
     "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
@@ -65,19 +65,19 @@ function getColors(status) {
   if (status === "ACTIVE") {
     return {
       ring: "rgba(110,255,200,1)",
-      fuel: "rgba(110,255,200,0.65)",
-      mist: "rgba(110,255,200,0.18)"
+      fuel: "rgba(110,255,200,0.75)",
+      mist: "rgba(110,255,200,0.15)"
     };
   }
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,190,120,0.9)",
-      fuel: "rgba(255,190,120,0.45)",
-      mist: "rgba(255,190,120,0.14)"
+      ring: "rgba(255,185,120,0.85)",
+      fuel: null,
+      mist: "rgba(255,185,120,0.12)"
     };
   }
   return {
-    ring: "rgba(170,170,170,0.7)",
+    ring: "rgba(180,180,180,0.6)",
     fuel: null,
     mist: null
   };
@@ -89,30 +89,20 @@ function drawRing(color) {
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 8;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 28;
+  ctx.shadowBlur = 36;
   ctx.stroke();
   ctx.restore();
 }
 
 /* ================= INNER DEPTH ================= */
-function drawInnerDepth() {
-  const grad = ctx.createRadialGradient(
-    CENTER.x,
-    CENTER.y,
-    INNER_RADIUS * 0.25,
-    CENTER.x,
-    CENTER.y,
-    INNER_RADIUS
-  );
-  grad.addColorStop(0, "rgba(255,255,255,0.04)");
-  grad.addColorStop(1, "rgba(0,0,0,0.45)");
-
+function drawInnerDepth(color) {
+  if (!color) return;
   ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.restore();
 }
@@ -121,7 +111,7 @@ function drawInnerDepth() {
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
-  const height = INNER_RADIUS * 2 * level;
+  const fillHeight = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
 
   ctx.save();
@@ -130,51 +120,18 @@ function drawFuel(level, color) {
   ctx.clip();
 
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - height);
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
-      Math.sin((x + waveOffset) * 0.045) * 3 +
-      Math.sin(waveOffset * 0.6) * 1.5 +
-      (baseY - height);
+      Math.sin((x + waveOffset) * 0.05) * 4 +
+      (baseY - fillHeight);
     ctx.lineTo(CENTER.x + x, y);
   }
 
   ctx.lineTo(CENTER.x + INNER_RADIUS, baseY);
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
-
-  ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 8;
-  ctx.fill();
-  ctx.restore();
-}
-
-/* ================= COLORED MIST ================= */
-function drawMist(level, color) {
-  if (!color || level <= 0) return;
-
-  const mistY =
-    CENTER.y + INNER_RADIUS -
-    INNER_RADIUS * 2 * level -
-    6;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.clip();
-
-  ctx.beginPath();
-  ctx.ellipse(
-    CENTER.x,
-    mistY + Math.sin(mistOffset) * 1.5,
-    INNER_RADIUS * 0.9,
-    6,
-    0,
-    0,
-    Math.PI * 2
-  );
 
   ctx.fillStyle = color;
   ctx.shadowColor = color;
@@ -187,26 +144,26 @@ function drawMist(level, color) {
 async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawRing("rgba(150,150,150,0.35)");
-  drawInnerDepth();
-
   try {
     const data = await fetchData();
     const status = getStatus(data);
     const colors = getColors(status);
 
+    drawInnerDepth(colors.mist);
     drawRing(colors.ring);
 
     if (status === "ACTIVE") {
-      const winrate = Math.max(0, Math.min(1, (data.weekly.winrate || 0) / 100));
+      const winrate = Math.max(
+        0,
+        Math.min(1, (data.weekly.winrate || 0) / 100)
+      );
       drawFuel(winrate, colors.fuel);
-      drawMist(winrate, colors.mist);
     }
-  } catch {}
+  } catch (e) {
+    // silent by design
+  }
 
   waveOffset += 0.6;
-  mistOffset += 0.015;
-
   requestAnimationFrame(render);
 }
 
