@@ -8,7 +8,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent;
+  background: transparent !important;
   overflow: hidden;
 }
 
@@ -22,6 +22,7 @@ html, body {
 
 canvas {
   background: transparent;
+  display: block;
 }
 </style>
 </head>
@@ -29,100 +30,115 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status" width="220" height="180"></canvas>
+  <canvas id="status" width="260" height="220"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: true });
 
-const CENTER = { x: 110, y: 90 };
+const CENTER = {
+  x: canvas.width / 2,
+  y: canvas.height / 2
+};
+
 const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
+let glowPhase = 0;
+let latestData = null;
 
-/* ===== STATE (never undefined) ===== */
-let systemState = {
-  status: "INACTIVE",
-  winrate: 0
-};
-
-/* ===== SAFE FETCH (timer based) ===== */
-async function updateState() {
+/* ================= FETCH ENGINE ================= */
+async function fetchData() {
   try {
     const res = await fetch(
       "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
       { cache: "no-store" }
     );
-    const data = await res.json();
-
-    if (data.weekly?.trades > 0) {
-      systemState.status = "ACTIVE";
-      systemState.winrate = data.weekly.winrate || 0;
-    } else if (data.monthly?.trades > 0) {
-      systemState.status = "IDLE";
-      systemState.winrate = 0;
-    } else {
-      systemState.status = "INACTIVE";
-      systemState.winrate = 0;
-    }
-  } catch {
-    // keep last known state
-  }
+    latestData = await res.json();
+  } catch (e) {}
 }
 
-/* fetch every 10 seconds */
-updateState();
-setInterval(updateState, 10000);
+fetchData();
+setInterval(fetchData, 10000);
 
-/* ===== COLORS ===== */
+/* ================= STATUS ================= */
+function getStatus(data) {
+  if (!data) return "INACTIVE";
+  if (data.weekly?.trades >= 1) return "ACTIVE";
+  if (data.monthly?.trades >= 1) return "IDLE";
+  return "INACTIVE";
+}
+
+/* ================= COLORS ================= */
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(110,255,200,1)",
-      fuel: "rgba(110,255,200,0.75)",
-      mist: "rgba(110,255,200,0.15)"
+      ring: "rgba(120,255,200,1)",
+      glow: "rgba(120,255,200,0.9)",
+      fuel: "rgba(120,255,200,0.65)"
     };
   }
+
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,185,120,0.85)",
-      fuel: null,
-      mist: "rgba(255,185,120,0.12)"
+      ring: "rgba(255,190,110,0.85)",
+      glow: "rgba(255,190,110,0.45)",
+      fuel: null
     };
   }
+
   return {
-    ring: "rgba(180,180,180,0.6)",
-    fuel: null,
-    mist: null
+    ring: "rgba(170,170,170,0.8)",
+    glow: "rgba(170,170,170,0.35)",
+    fuel: null
   };
 }
 
-/* ===== DRAW ===== */
-function drawRing(color) {
+/* ================= INNER DEPTH ================= */
+function drawInnerDepth() {
+  const grad = ctx.createRadialGradient(
+    CENTER.x,
+    CENTER.y,
+    INNER_RADIUS * 0.3,
+    CENTER.x,
+    CENTER.y,
+    INNER_RADIUS
+  );
+
+  grad.addColorStop(0, "rgba(255,255,255,0.06)");
+  grad.addColorStop(1, "rgba(0,0,0,0.35)");
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+}
+
+/* ================= RING (BREATHING GLOW) ================= */
+function drawRing(color, glow) {
+  const breathing =
+    26 + Math.sin(glowPhase) * 6; // subtle inhale/exhale
+
+  ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
   ctx.lineWidth = 8;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 36;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = breathing;
   ctx.stroke();
-  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
-function drawInner(color) {
-  if (!color) return;
-  ctx.beginPath();
-  ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-}
-
+/* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
-  const h = INNER_RADIUS * 2 * level;
+  const fillHeight = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
 
   ctx.save();
@@ -130,41 +146,60 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
+  const gradient = ctx.createLinearGradient(
+    0,
+    baseY - fillHeight,
+    0,
+    baseY
+  );
+  gradient.addColorStop(0, "rgba(180,255,225,0.9)");
+  gradient.addColorStop(1, color);
+
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
+
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
-      Math.sin((x + waveOffset) * 0.05) * 4 +
-      (baseY - h);
+      Math.sin((x + waveOffset) * 0.045) * 3 +
+      (baseY - fillHeight);
     ctx.lineTo(CENTER.x + x, y);
   }
+
   ctx.lineTo(CENTER.x + INNER_RADIUS, baseY);
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  ctx.fillStyle = color;
+  ctx.fillStyle = gradient;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
   ctx.fill();
   ctx.restore();
 }
 
-/* ===== MAIN LOOP (never async) ===== */
-function loop() {
+/* ================= LOOP ================= */
+function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const colors = getColors(systemState.status);
+  const status = getStatus(latestData);
+  const colors = getColors(status);
 
-  drawInner(colors.mist);
-  drawRing(colors.ring);
+  drawRing(colors.ring, colors.glow);
+  drawInnerDepth();
 
-  if (systemState.status === "ACTIVE") {
-    drawFuel(systemState.winrate / 100, colors.fuel);
+  if (status === "ACTIVE" && latestData) {
+    const winrate = Math.max(
+      0,
+      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
+    );
+    drawFuel(winrate, colors.fuel);
   }
 
-  waveOffset += 0.6;
-  requestAnimationFrame(loop);
+  waveOffset += 0.4;
+  glowPhase += 0.015; // slow breathing
+  requestAnimationFrame(render);
 }
 
-loop();
+render();
 </script>
 
 </body>
