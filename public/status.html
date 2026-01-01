@@ -30,44 +30,33 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status" width="260" height="220"></canvas>
+  <canvas id="status" width="240" height="190"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-const CENTER = {
-  x: canvas.width / 2,
-  y: canvas.height / 2
-};
-
-const RADIUS = 66;
-const INNER_RADIUS = 52;
+const CENTER = { x: 120, y: 95 };
+const RADIUS = 68;
+const INNER_RADIUS = 54;
 
 let waveOffset = 0;
-let glowPhase = 0;
-let latestData = null;
+let mistOffset = 0;
 
 /* ================= FETCH ENGINE ================= */
 async function fetchData() {
-  try {
-    const res = await fetch(
-      "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
-      { cache: "no-store" }
-    );
-    latestData = await res.json();
-  } catch (e) {}
+  const res = await fetch(
+    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+    { cache: "no-store" }
+  );
+  return res.json();
 }
-
-fetchData();
-setInterval(fetchData, 10000);
 
 /* ================= STATUS ================= */
 function getStatus(data) {
-  if (!data) return "INACTIVE";
-  if (data.weekly?.trades >= 1) return "ACTIVE";
-  if (data.monthly?.trades >= 1) return "IDLE";
+  if (data.weekly?.trades > 0) return "ACTIVE";
+  if (data.monthly?.trades > 0) return "IDLE";
   return "INACTIVE";
 }
 
@@ -75,25 +64,36 @@ function getStatus(data) {
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(120,255,200,1)",
-      glow: "rgba(120,255,200,0.9)",
-      fuel: "rgba(120,255,200,0.65)"
+      ring: "rgba(110,255,200,1)",
+      fuel: "rgba(110,255,200,0.65)",
+      mist: "rgba(110,255,200,0.18)"
     };
   }
-
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,190,110,0.85)",
-      glow: "rgba(255,190,110,0.45)",
-      fuel: null
+      ring: "rgba(255,190,120,0.9)",
+      fuel: "rgba(255,190,120,0.45)",
+      mist: "rgba(255,190,120,0.14)"
     };
   }
-
   return {
-    ring: "rgba(170,170,170,0.8)",
-    glow: "rgba(170,170,170,0.35)",
-    fuel: null
+    ring: "rgba(170,170,170,0.7)",
+    fuel: null,
+    mist: null
   };
+}
+
+/* ================= RING ================= */
+function drawRing(color) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 7;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 28;
+  ctx.stroke();
+  ctx.restore();
 }
 
 /* ================= INNER DEPTH ================= */
@@ -101,14 +101,13 @@ function drawInnerDepth() {
   const grad = ctx.createRadialGradient(
     CENTER.x,
     CENTER.y,
-    INNER_RADIUS * 0.3,
+    INNER_RADIUS * 0.25,
     CENTER.x,
     CENTER.y,
     INNER_RADIUS
   );
-
-  grad.addColorStop(0, "rgba(255,255,255,0.06)");
-  grad.addColorStop(1, "rgba(0,0,0,0.35)");
+  grad.addColorStop(0, "rgba(255,255,255,0.04)");
+  grad.addColorStop(1, "rgba(0,0,0,0.45)");
 
   ctx.save();
   ctx.beginPath();
@@ -118,27 +117,11 @@ function drawInnerDepth() {
   ctx.restore();
 }
 
-/* ================= RING (BREATHING GLOW) ================= */
-function drawRing(color, glow) {
-  const breathing =
-    26 + Math.sin(glowPhase) * 6; // subtle inhale/exhale
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 8;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = breathing;
-  ctx.stroke();
-  ctx.restore();
-}
-
 /* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
-  const fillHeight = INNER_RADIUS * 2 * level;
+  const height = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
 
   ctx.save();
@@ -146,22 +129,14 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
-  const gradient = ctx.createLinearGradient(
-    0,
-    baseY - fillHeight,
-    0,
-    baseY
-  );
-  gradient.addColorStop(0, "rgba(180,255,225,0.9)");
-  gradient.addColorStop(1, color);
-
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - height);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const y =
       Math.sin((x + waveOffset) * 0.045) * 3 +
-      (baseY - fillHeight);
+      Math.sin(waveOffset * 0.6) * 1.5 +
+      (baseY - height);
     ctx.lineTo(CENTER.x + x, y);
   }
 
@@ -169,33 +144,69 @@ function drawFuel(level, color) {
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.restore();
+}
+
+/* ================= COLORED MIST ================= */
+function drawMist(level, color) {
+  if (!color || level <= 0) return;
+
+  const mistY =
+    CENTER.y + INNER_RADIUS -
+    INNER_RADIUS * 2 * level -
+    6;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.beginPath();
+  ctx.ellipse(
+    CENTER.x,
+    mistY + Math.sin(mistOffset) * 1.5,
+    INNER_RADIUS * 0.9,
+    6,
+    0,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 18;
   ctx.fill();
   ctx.restore();
 }
 
 /* ================= LOOP ================= */
-function render() {
+async function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const status = getStatus(latestData);
-  const colors = getColors(status);
-
-  drawRing(colors.ring, colors.glow);
+  drawRing("rgba(150,150,150,0.35)");
   drawInnerDepth();
 
-  if (status === "ACTIVE" && latestData) {
-    const winrate = Math.max(
-      0,
-      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
-    );
-    drawFuel(winrate, colors.fuel);
-  }
+  try {
+    const data = await fetchData();
+    const status = getStatus(data);
+    const colors = getColors(status);
 
-  waveOffset += 0.4;
-  glowPhase += 0.015; // slow breathing
+    drawRing(colors.ring);
+
+    if (status === "ACTIVE") {
+      const winrate = Math.max(0, Math.min(1, (data.weekly.winrate || 0) / 100));
+      drawFuel(winrate, colors.fuel);
+      drawMist(winrate, colors.mist);
+    }
+  } catch {}
+
+  waveOffset += 0.6;
+  mistOffset += 0.015;
+
   requestAnimationFrame(render);
 }
 
