@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>System Status Core</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.container {
+  width: 260px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+canvas {
+  display: block;
+  background: transparent;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <canvas id="status" width="220" height="180"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("status");
+const ctx = canvas.getContext("2d", { alpha: true });
+
+const CENTER = { x: 110, y: 90 };
+const RADIUS = 62;
+const INNER_RADIUS = 52;
+
+let waveOffset = 0;
+
+/* ================= FETCH ENGINE ================= */
+async function fetchData() {
+  const res = await fetch(
+    "https://trading-dashboard-api-five.vercel.app/api/engine?t=" + Date.now(),
+    { cache: "no-store" }
+  );
+  return res.json();
+}
+
+/* ================= STATUS LOGIC ================= */
+function getStatus(data) {
+  if (data.weekly.trades > 0) return "ACTIVE";
+  if (data.monthly.trades > 0) return "IDLE";
+  return "INACTIVE";
+}
+
+/* ================= COLORS ================= */
+function getColors(status) {
+  if (status === "ACTIVE") {
+    return {
+      ring: "rgba(120,255,195,1)",
+      fuel: "rgba(120,255,195,0.55)"
+    };
+  }
+  if (status === "IDLE") {
+    return {
+      ring: "rgba(150,150,150,0.55)",
+      fuel: "rgba(150,150,150,0.25)"
+    };
+  }
+  return {
+    ring: "rgba(220,160,110,0.55)",
+    fuel: null
+  };
+}
+
+/* ================= RING ================= */
+function drawRing(color) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 6;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 24;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ================= FUEL ================= */
+function drawFuel(level, color) {
+  if (!color || level <= 0) return;
+
+  const fillHeight = INNER_RADIUS * 2 * level;
+  const baseY = CENTER.y + INNER_RADIUS;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.beginPath();
+  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - fillHeight);
+
+  for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
+    const y =
+      Math.sin((x + waveOffset) * 0.05) * 4 +
+      (baseY - fillHeight);
+    ctx.lineTo(CENTER.x + x, y);
+  }
+
+  ctx.lineTo(CENTER.x + INNER_RADIUS, baseY);
+  ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
+  ctx.closePath();
+
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.restore();
+}
+
+/* ================= LOOP ================= */
+async function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  try {
+    const data = await fetchData();
+    const status = getStatus(data);
+    const colors = getColors(status);
+
+    drawRing(colors.ring);
+
+    if (status !== "INACTIVE") {
+      const winrate = Math.max(
+        0,
+        Math.min(1, data.weekly.winrate / 100)
+      );
+      drawFuel(winrate, colors.fuel);
+    }
+  } catch {
+    // silent fail – calm by design
+  }
+
+  waveOffset += 0.6;
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+
+</body>
+</html>
