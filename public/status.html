@@ -57,9 +57,7 @@ async function fetchData() {
       { cache: "no-store" }
     );
     latestData = await res.json();
-  } catch (e) {
-    // keep last known state (intentional)
-  }
+  } catch (e) {}
 }
 
 fetchData();
@@ -78,22 +76,22 @@ function getColors(status) {
   if (status === "ACTIVE") {
     return {
       ring: "rgba(120,255,200,1)",
-      glow: "rgba(120,255,200,0.9)",
+      glow: "rgba(120,255,200,1)",
       fuel: "rgba(120,255,200,0.65)"
     };
   }
 
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,190,110,0.85)",
-      glow: "rgba(255,190,110,0.45)",
+      ring: "rgba(255,190,110,0.9)",
+      glow: "rgba(255,190,110,0.6)",
       fuel: null
     };
   }
 
   return {
-    ring: "rgba(170,170,170,0.8)",
-    glow: "rgba(170,170,170,0.35)",
+    ring: "rgba(170,170,170,0.9)",
+    glow: "rgba(170,170,170,0.5)",
     fuel: null
   };
 }
@@ -120,9 +118,9 @@ function drawInnerDepth() {
   ctx.restore();
 }
 
-/* ================= RING (BREATHING GLOW) ================= */
+/* ================= RING (ENHANCED BREATHING GLOW) ================= */
 function drawRing(color, glow) {
-  const breathing = 26 + Math.sin(glowPhase) * 6;
+  const breathing = 30 + Math.sin(glowPhase) * 10;
 
   ctx.save();
   ctx.beginPath();
@@ -172,7 +170,7 @@ function drawFuel(level, color) {
 
   ctx.fillStyle = gradient;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 12;
   ctx.fill();
   ctx.restore();
 }
@@ -181,7 +179,6 @@ function drawFuel(level, color) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Always draw base INACTIVE ring first (prevents blank screen)
   const base = getColors("INACTIVE");
   drawInnerDepth();
   drawRing(base.ring, base.glow);
@@ -202,7 +199,7 @@ function render() {
   }
 
   waveOffset += 0.4;
-  glowPhase += 0.015;
+  glowPhase += 0.02; // slightly faster breathing
   requestAnimationFrame(render);
 }
 
