@@ -8,7 +8,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent;
+  background: transparent !important;
   overflow: hidden;
 }
 
@@ -18,13 +18,10 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
 }
 
 canvas {
-  width: 220px;
-  height: 180px;
-  display: block;
+  background: transparent;
 }
 </style>
 </head>
@@ -32,30 +29,18 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="status"></canvas>
+  <canvas id="status" width="220" height="180"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d");
 
-const DPR = window.devicePixelRatio || 1;
-
-// Logical size (CSS)
-const WIDTH = 220;
-const HEIGHT = 180;
-
-// Physical buffer
-canvas.width = WIDTH * DPR;
-canvas.height = HEIGHT * DPR;
-ctx.scale(DPR, DPR);
-
-const CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
+const CENTER = { x: 110, y: 90 };
 const RADIUS = 64;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
-let lastData = null;
 
 /* ================= FETCH ================= */
 async function fetchData() {
@@ -68,35 +53,45 @@ async function fetchData() {
 
 /* ================= STATUS ================= */
 function getStatus(data) {
-  if (data?.weekly?.trades >= 1) return "ACTIVE";
-  if (data?.monthly?.trades >= 1) return "IDLE";
+  if (data.weekly?.trades >= 1) return "ACTIVE";
+  if (data.monthly?.trades >= 1) return "IDLE";
   return "INACTIVE";
 }
 
 /* ================= COLORS ================= */
 function getColors(status) {
   if (status === "ACTIVE") {
-    return { ring: "rgba(110,255,200,1)", fuel: "rgba(110,255,200,0.65)" };
+    return {
+      ring: "rgba(110,255,200,1)",
+      fuel: "rgba(110,255,200,0.65)"
+    };
   }
   if (status === "IDLE") {
-    return { ring: "rgba(180,180,180,0.7)", fuel: "rgba(180,180,180,0.12)" };
+    return {
+      ring: "rgba(255,180,90,0.85)",
+      fuel: null
+    };
   }
-  return { ring: "rgba(255,170,90,0.75)", fuel: null };
+  return {
+    ring: "rgba(170,170,170,0.75)",
+    fuel: null
+  };
 }
 
-/* ================= DRAW ================= */
+/* ================= RING ================= */
 function drawRing(color) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 7;
   ctx.shadowColor = color;
   ctx.shadowBlur = 28;
   ctx.stroke();
   ctx.restore();
 }
 
+/* ================= FUEL ================= */
 function drawFuel(level, color) {
   if (!color || level <= 0) return;
 
@@ -129,36 +124,34 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-function render() {
-  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+/* ================= LOOP ================= */
+async function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const data = lastData;
-  const status = getStatus(data || {});
-  const colors = getColors(status);
+  try {
+    const data = await fetchData();
+    const status = getStatus(data);
+    const colors = getColors(status);
 
-  drawRing(colors.ring);
+    drawRing(colors.ring);
 
-  if (status === "ACTIVE" && data) {
-    drawFuel(Math.min(1, (data.weekly.winrate || 0) / 100), colors.fuel);
+    if (status === "ACTIVE") {
+      const winrate = Math.max(
+        0,
+        Math.min(1, (data.weekly?.winrate || 0) / 100)
+      );
+      drawFuel(winrate, colors.fuel);
+    }
+
+  } catch (e) {
+    drawRing("rgba(170,170,170,0.6)");
   }
 
   waveOffset += 0.6;
+  requestAnimationFrame(render);
 }
 
-/* ================= LOOP ================= */
-
-// Render at fixed FPS (stable in Notion)
-setInterval(render, 50);
-
-// Fetch data slower
-async function poll() {
-  try {
-    lastData = await fetchData();
-  } catch {}
-  setTimeout(poll, 4000);
-}
-
-poll();
+render();
 </script>
 
 </body>
