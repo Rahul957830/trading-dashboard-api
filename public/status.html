@@ -52,28 +52,27 @@ let latestData = null;
 const bubbles = [];
 let lastBurst = 0;
 
-function createBubble(burst = false) {
+function createBubble({ burst = false } = {}) {
   return {
     x: (Math.random() * 2 - 1) * INNER_RADIUS * 0.6,
-    y: Math.random() * INNER_RADIUS * 0.4,
+    y: Math.random() * INNER_RADIUS * 0.3,
     r: burst
       ? 1.2 + Math.random() * 0.6
       : 1.4 + Math.random() * 0.8,
     speed: burst
-      ? 0.25 + Math.random() * 0.15
+      ? 0.35 + Math.random() * 0.2
       : 0.12 + Math.random() * 0.1,
-    drift: (Math.random() * 2 - 1) * 0.05,
+    drift: (Math.random() * 2 - 1) * 0.06,
     alpha: burst
-      ? 0.25 + Math.random() * 0.1
-      : 0.18 + Math.random() * 0.08,
-    maxRise: burst
-      ? INNER_RADIUS * 0.9
-      : INNER_RADIUS * 2
+      ? 0.22 + Math.random() * 0.15
+      : 0.16 + Math.random() * 0.06,
+    burst,
+    life: 1
   };
 }
 
 // base bubbles
-for (let i = 0; i < 5; i++) bubbles.push(createBubble());
+for (let i = 0; i < 4; i++) bubbles.push(createBubble());
 
 /* ================= FETCH ================= */
 async function fetchData() {
@@ -103,7 +102,7 @@ function getColors(status) {
       ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,1)",
       fuel: "rgba(120,255,200,0.7)",
-      bubble: "rgba(200,255,235,0.7)"
+      bubble: "rgba(200,255,235,0.8)"
     };
   }
   if (status === "IDLE") {
@@ -166,12 +165,13 @@ function drawRing(color, glow, status) {
   }
 }
 
-/* ================= FUEL + BUBBLES ================= */
+/* ================= FUEL + BURST BUBBLES ================= */
 function drawFuel(level, color, bubbleColor, status) {
   if (!color || level <= 0) return;
 
   const h = INNER_RADIUS * 2 * level;
   const baseY = CENTER.y + INNER_RADIUS;
+  const surfaceY = baseY - h;
 
   boilPhase += 0.01;
 
@@ -182,13 +182,13 @@ function drawFuel(level, color, bubbleColor, status) {
 
   /* surface */
   ctx.beginPath();
-  ctx.moveTo(CENTER.x - INNER_RADIUS, baseY - h);
+  ctx.moveTo(CENTER.x - INNER_RADIUS, surfaceY);
 
   for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
     const wave = Math.sin((x + waveOffset) * 0.045) * 3;
     const heat = Math.sin((x * 0.12) + heatPhase) * 2;
     const convection = Math.sin(boilPhase + x * 0.03) * 1.5;
-    const y = baseY - h + wave + heat + convection;
+    const y = surfaceY + wave + heat + convection;
     ctx.lineTo(CENTER.x + x, y);
   }
 
@@ -196,7 +196,7 @@ function drawFuel(level, color, bubbleColor, status) {
   ctx.lineTo(CENTER.x - INNER_RADIUS, baseY);
   ctx.closePath();
 
-  const grad = ctx.createLinearGradient(0, baseY - h, 0, baseY);
+  const grad = ctx.createLinearGradient(0, surfaceY, 0, baseY);
   grad.addColorStop(0, "rgba(200,255,235,0.95)");
   grad.addColorStop(1, color);
 
@@ -205,19 +205,22 @@ function drawFuel(level, color, bubbleColor, status) {
   ctx.shadowBlur = 14;
   ctx.fill();
 
-  /* micro burst */
   if (status === "ACTIVE") {
     const now = performance.now();
+
+    // noticeable micro-burst
     if (now - lastBurst > 8000 + Math.random() * 4000) {
       lastBurst = now;
-      bubbles.push(createBubble(true), createBubble(true));
+      const burstCount = 5 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < burstCount; i++) {
+        bubbles.push(createBubble({ burst: true }));
+      }
     }
 
     for (const b of bubbles) {
       const yPos = baseY - b.y;
-      if (b.y > b.maxRise || yPos < baseY - h) continue;
 
-      ctx.globalAlpha = b.alpha;
+      ctx.globalAlpha = b.alpha * b.life;
       ctx.beginPath();
       ctx.arc(CENTER.x + b.x, yPos, b.r, 0, Math.PI * 2);
       ctx.fillStyle = bubbleColor;
@@ -228,7 +231,14 @@ function drawFuel(level, color, bubbleColor, status) {
       b.y += b.speed;
       b.x += b.drift;
 
-      if (b.y > b.maxRise) Object.assign(b, createBubble());
+      // allow burst bubbles to rise slightly above surface
+      if (b.burst && yPos < surfaceY - 8) {
+        b.life -= 0.08;
+      }
+
+      if (b.life <= 0 || b.y > h + 12) {
+        Object.assign(b, createBubble());
+      }
     }
     ctx.globalAlpha = 1;
   }
