@@ -12,6 +12,7 @@ html, body {
   overflow: hidden;
 }
 
+/* Fixed widget footprint (Notion-safe) */
 .container {
   width: 260px;
   height: 190px;
@@ -20,7 +21,7 @@ html, body {
   justify-content: center;
 }
 
-/* no forced centering tricks here */
+/* Canvas gets extra invisible space for glow */
 canvas {
   background: transparent;
   display: block;
@@ -31,23 +32,27 @@ canvas {
 <body>
 
 <div class="container">
-  <!-- ORIGINAL canvas size (no centering hacks) -->
-  <canvas id="status" width="220" height="180"></canvas>
+  <!-- Larger canvas to avoid glow clipping -->
+  <canvas id="status" width="260" height="220"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("status");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-/* ORIGINAL center (we are NOT changing centering now) */
-const CENTER = { x: 110, y: 90 };
+/* TRUE optical center of canvas */
+const CENTER = {
+  x: canvas.width / 2,
+  y: canvas.height / 2
+};
+
 const RADIUS = 66;
 const INNER_RADIUS = 52;
 
 let waveOffset = 0;
 let latestData = null;
 
-/* ================= FETCH ENGINE (SLOW, STABLE) ================= */
+/* ================= FETCH ENGINE (DECOUPLED) ================= */
 async function fetchData() {
   try {
     const res = await fetch(
@@ -56,11 +61,10 @@ async function fetchData() {
     );
     latestData = await res.json();
   } catch (e) {
-    // keep last known state (offline-safe)
+    // offline-safe: keep last state
   }
 }
 
-// initial + interval fetch
 fetchData();
 setInterval(fetchData, 10000);
 
@@ -72,11 +76,11 @@ function getStatus(data) {
   return "INACTIVE";
 }
 
-/* ================= BEAUTIFIED COLORS ================= */
+/* ================= COLORS (BEAUTIFIED) ================= */
 function getColors(status) {
   if (status === "ACTIVE") {
     return {
-      ring: "rgba(120,255,200,1)",        // emerald
+      ring: "rgba(120,255,200,1)",
       glow: "rgba(120,255,200,0.9)",
       fuel: "rgba(120,255,200,0.65)"
     };
@@ -84,7 +88,7 @@ function getColors(status) {
 
   if (status === "IDLE") {
     return {
-      ring: "rgba(255,190,110,0.85)",     // warm amber
+      ring: "rgba(255,190,110,0.85)",
       glow: "rgba(255,190,110,0.45)",
       fuel: null
     };
@@ -92,13 +96,13 @@ function getColors(status) {
 
   // INACTIVE
   return {
-    ring: "rgba(170,170,170,0.8)",        // neutral grey
+    ring: "rgba(170,170,170,0.8)",
     glow: "rgba(170,170,170,0.35)",
     fuel: null
   };
 }
 
-/* ================= RING (BEAUTIFIED) ================= */
+/* ================= RING ================= */
 function drawRing(color, glow) {
   ctx.save();
   ctx.beginPath();
@@ -106,7 +110,7 @@ function drawRing(color, glow) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 8;
   ctx.shadowColor = glow;
-  ctx.shadowBlur = 30;
+  ctx.shadowBlur = 32;
   ctx.stroke();
   ctx.restore();
 }
@@ -123,7 +127,6 @@ function drawFuel(level, color) {
   ctx.arc(CENTER.x, CENTER.y, INNER_RADIUS, 0, Math.PI * 2);
   ctx.clip();
 
-  // subtle vertical gradient for depth
   const gradient = ctx.createLinearGradient(
     0,
     baseY - fillHeight,
@@ -154,7 +157,7 @@ function drawFuel(level, color) {
   ctx.restore();
 }
 
-/* ================= RENDER LOOP (FAST, SAFE) ================= */
+/* ================= RENDER LOOP (FAST & SAFE) ================= */
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
