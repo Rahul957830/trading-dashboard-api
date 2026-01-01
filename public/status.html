@@ -57,7 +57,9 @@ async function fetchData() {
       { cache: "no-store" }
     );
     latestData = await res.json();
-  } catch (e) {}
+  } catch (e) {
+    // keep last known state (intentional)
+  }
 }
 
 fetchData();
@@ -120,8 +122,7 @@ function drawInnerDepth() {
 
 /* ================= RING (BREATHING GLOW) ================= */
 function drawRing(color, glow) {
-  const breathing =
-    26 + Math.sin(glowPhase) * 6; // subtle inhale/exhale
+  const breathing = 26 + Math.sin(glowPhase) * 6;
 
   ctx.save();
   ctx.beginPath();
@@ -180,22 +181,28 @@ function drawFuel(level, color) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const status = getStatus(latestData);
-  const colors = getColors(status);
-
-  drawRing(colors.ring, colors.glow);
+  // Always draw base INACTIVE ring first (prevents blank screen)
+  const base = getColors("INACTIVE");
   drawInnerDepth();
+  drawRing(base.ring, base.glow);
 
-  if (status === "ACTIVE" && latestData) {
-    const winrate = Math.max(
-      0,
-      Math.min(1, (latestData.weekly?.winrate || 0) / 100)
-    );
-    drawFuel(winrate, colors.fuel);
+  if (latestData) {
+    const status = getStatus(latestData);
+    const colors = getColors(status);
+
+    drawRing(colors.ring, colors.glow);
+
+    if (status === "ACTIVE") {
+      const winrate = Math.max(
+        0,
+        Math.min(1, (latestData.weekly?.winrate || 0) / 100)
+      );
+      drawFuel(winrate, colors.fuel);
+    }
   }
 
   waveOffset += 0.4;
-  glowPhase += 0.015; // slow breathing
+  glowPhase += 0.015;
   requestAnimationFrame(render);
 }
 
