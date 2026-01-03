@@ -1,15 +1,15 @@
-/* =========================================================
-   ENGINE UI ADAPTER
-   Purpose:
-   - Derive UI-friendly state from core engine
-   - NEVER recalculates trades
-   - ONLY interprets engine output
-========================================================= */
+import { Client } from "@notionhq/client";
+
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN
+});
+
+const TARGETS_DB = process.env.NOTION_TARGETS_DB;
 
 export default async function handler(req, res) {
   try {
     /* -------------------------------
-       FETCH CORE ENGINE
+       FETCH CORE ENGINE (UNCHANGED)
     -------------------------------- */
     const coreRes = await fetch(
       "https://trading-dashboard-api-five.vercel.app/api/engine",
@@ -21,47 +21,59 @@ export default async function handler(req, res) {
     }
 
     const core = await coreRes.json();
-
     const { daily, weekly, monthly } = core;
 
     /* -------------------------------
-       STATUS RULE (FINAL, LOCKED)
-    --------------------------------
-       - DAILY never affects status
-       - Weekly > Monthly > Inactive
-    */
+       STATUS RULE (LOCKED)
+    -------------------------------- */
     let status = "INACTIVE";
-
-    if (weekly.trades > 0) {
-      status = "ACTIVE";
-    } else if (monthly.trades > 0) {
-      status = "IDLE";
-    }
+    if (weekly.trades > 0) status = "ACTIVE";
+    else if (monthly.trades > 0) status = "IDLE";
 
     /* -------------------------------
-       ATTACH FLAGS
+       HAS-TRADES FLAGS (PRESERVED)
     -------------------------------- */
     daily.hasTrades = daily.trades > 0;
     weekly.hasTrades = weekly.trades > 0;
     monthly.hasTrades = monthly.trades > 0;
 
     /* -------------------------------
-       TARGET & PROGRESS (SAFE)
+       FETCH TARGETS (NEW – SAFE)
     -------------------------------- */
-    weekly.target ??= null;
+    let weeklyTarget = null;
+    let monthlyTarget = null;
+
+    if (TARGETS_DB) {
+      const targetsRes = await notion.databases.query({
+        database_id: TARGETS_DB
+      });
+
+      targetsRes.results.forEach(p => {
+        const type = p.properties["Target Type"]?.select?.name;
+        const value = p.properties["Target"]?.number ?? null;
+
+        if (type === "Weekly") weeklyTarget = value;
+        if (type === "Monthly") monthlyTarget = value;
+      });
+    }
+
+    /* -------------------------------
+       ATTACH TARGET + PROGRESS
+    -------------------------------- */
+    weekly.target = weeklyTarget;
     weekly.progress =
-      weekly.target && weekly.target > 0
-        ? Number((weekly.pl / weekly.target).toFixed(2))
+      weeklyTarget && weeklyTarget > 0
+        ? Number((weekly.pl / weeklyTarget).toFixed(2))
         : null;
 
-    monthly.target ??= null;
+    monthly.target = monthlyTarget;
     monthly.progress =
-      monthly.target && monthly.target > 0
-        ? Number((monthly.pl / monthly.target).toFixed(2))
+      monthlyTarget && monthlyTarget > 0
+        ? Number((monthly.pl / monthlyTarget).toFixed(2))
         : null;
 
     /* -------------------------------
-       FINAL UI JSON
+       FINAL JSON
     -------------------------------- */
     res.status(200).json({
       status,
