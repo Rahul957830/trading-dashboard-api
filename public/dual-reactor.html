@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Dual Reactor – Weekly / Monthly</title>
+<title>Dual Reactor Core</title>
 
 <style>
 html, body {
@@ -13,16 +13,15 @@ html, body {
 }
 
 .container {
-  width: 420px;
+  width: 520px;
   height: 220px;
   display: flex;
-  align-items: center;
   justify-content: space-evenly;
+  align-items: center;
 }
 
 canvas {
   background: transparent;
-  display: block;
 }
 </style>
 </head>
@@ -30,136 +29,132 @@ canvas {
 <body>
 
 <div class="container">
-  <canvas id="weekly" width="180" height="220"></canvas>
-  <canvas id="monthly" width="180" height="220"></canvas>
+  <canvas id="weekly" width="220" height="220"></canvas>
+  <canvas id="monthly" width="220" height="220"></canvas>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const ENGINE_URL =
-  "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
+const API_URL = "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
 
-/* ================= REACTOR CLASS ================= */
-class Reactor {
-  constructor(canvas, speedFactor, tint) {
-    this.c = canvas;
-    this.ctx = canvas.getContext("2d", { alpha: true });
-    this.center = { x: canvas.width / 2, y: canvas.height / 2 };
-    this.R = 64;
-    this.IR = 50;
-    this.wave = 0;
-    this.glow = 0;
-    this.speed = speedFactor;
-    this.tint = tint;
-  }
+function Reactor(canvas, palette, motionSpeed) {
+  const ctx = canvas.getContext("2d");
+  const C = { x: canvas.width/2, y: canvas.height/2 };
+  const R = 66;
+  const IR = 52;
 
-  drawRing(active) {
-    this.glow += 0.015 * this.speed;
-    const breath = active
-      ? 28 + Math.sin(this.glow) * 10
-      : 12;
+  let wave = 0;
+  let breathe = 0;
 
-    this.ctx.beginPath();
-    this.ctx.arc(this.center.x, this.center.y, this.R, 0, Math.PI * 2);
-    this.ctx.strokeStyle = active ? this.tint : "rgba(150,150,150,0.6)";
-    this.ctx.lineWidth = 8;
-    this.ctx.shadowColor = active ? this.tint : "rgba(150,150,150,0.3)";
-    this.ctx.shadowBlur = breath;
-    this.ctx.stroke();
-  }
-
-  drawDepth() {
-    const g = this.ctx.createRadialGradient(
-      this.center.x, this.center.y, this.IR * 0.3,
-      this.center.x, this.center.y, this.IR
-    );
+  function drawDepth() {
+    const g = ctx.createRadialGradient(C.x, C.y, 20, C.x, C.y, IR);
     g.addColorStop(0, "rgba(255,255,255,0.05)");
-    g.addColorStop(1, "rgba(0,0,0,0.4)");
-
-    this.ctx.beginPath();
-    this.ctx.arc(this.center.x, this.center.y, this.IR, 0, Math.PI * 2);
-    this.ctx.fillStyle = g;
-    this.ctx.fill();
+    g.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
   }
 
-  drawFuel(level) {
+  function drawRing(color, glow, alive) {
+    breathe += alive ? 0.015 : 0.005;
+    const blur = alive ? 28 + Math.sin(breathe)*10 : 12;
+
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R, 0, Math.PI*2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 8;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = blur;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawFuel(level, color) {
     if (level <= 0) return;
 
-    const h = this.IR * 2 * level;
-    const baseY = this.center.y + this.IR;
-    const surface = baseY - h;
+    const h = IR * 2 * level;
+    const base = C.y + IR;
+    const surface = base - h;
 
-    this.wave += 0.35 * this.speed;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
+    ctx.clip();
 
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.arc(this.center.x, this.center.y, this.IR, 0, Math.PI * 2);
-    this.ctx.clip();
+    ctx.beginPath();
+    ctx.moveTo(C.x - IR, surface);
+    for (let x=-IR; x<=IR; x++) {
+      ctx.lineTo(
+        C.x + x,
+        surface + Math.sin((x+wave)*0.045)*3
+      );
+    }
+    ctx.lineTo(C.x + IR, base);
+    ctx.lineTo(C.x - IR, base);
+    ctx.closePath();
 
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.center.x - this.IR, surface);
+    const g = ctx.createLinearGradient(0, surface, 0, base);
+    g.addColorStop(0, "rgba(200,255,235,0.95)");
+    g.addColorStop(1, color);
 
-    for (let x = -this.IR; x <= this.IR; x++) {
-      const y =
-        Math.sin((x + this.wave) * 0.045) * 3 +
-        Math.sin(this.wave * 0.5 + x * 0.1) * 2;
-      this.ctx.lineTo(this.center.x + x, surface + y);
+    ctx.fillStyle = g;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function render(data) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawDepth();
+
+    let state = "IDLE";
+    if (data.hasTrades) {
+      if (data.pl > 0) state = "HEALTHY";
+      else if (data.pl < 0) state = "WARNING";
+      else state = "BREAKEVEN";
     }
 
-    this.ctx.lineTo(this.center.x + this.IR, baseY);
-    this.ctx.lineTo(this.center.x - this.IR, baseY);
-    this.ctx.closePath();
+    const styles = {
+      IDLE:     { ring:"#999", glow:"rgba(150,150,150,.3)", fuel:0 },
+      BREAKEVEN:{ ring:palette.ring, glow:palette.glow, fuel:0 },
+      HEALTHY:  { ring:palette.ring, glow:palette.glow, fuel:data.progress },
+      WARNING:  { ring:"rgba(255,170,90,.8)", glow:"rgba(255,170,90,.4)", fuel:0 }
+    };
 
-    const grad = this.ctx.createLinearGradient(0, surface, 0, baseY);
-    grad.addColorStop(0, "rgba(190,255,235,0.95)");
-    grad.addColorStop(1, this.tint);
+    const s = styles[state];
+    drawRing(s.ring, s.glow, state==="HEALTHY");
+    drawFuel(s.fuel, palette.fuel);
 
-    this.ctx.fillStyle = grad;
-    this.ctx.shadowColor = this.tint;
-    this.ctx.shadowBlur = 14;
-    this.ctx.fill();
-    this.ctx.restore();
+    wave += motionSpeed;
+    requestAnimationFrame(() => render(data));
   }
 
-  render(progress) {
-    this.ctx.clearRect(0, 0, this.c.width, this.c.height);
-    this.drawDepth();
-    this.drawRing(progress > 0);
-    this.drawFuel(progress);
-  }
+  return render;
 }
 
 /* ================= INIT ================= */
-const weeklyReactor = new Reactor(
+
+const weeklyReactor = Reactor(
   document.getElementById("weekly"),
-  1.25,
-  "rgba(120,255,220,0.9)"
+  { ring:"rgba(120,255,220,1)", glow:"rgba(120,255,220,1)", fuel:"rgba(120,255,220,.7)" },
+  0.35
 );
 
-const monthlyReactor = new Reactor(
+const monthlyReactor = Reactor(
   document.getElementById("monthly"),
-  0.7,
-  "rgba(90,220,180,0.85)"
+  { ring:"rgba(90,220,160,1)", glow:"rgba(90,220,160,1)", fuel:"rgba(90,220,160,.7)" },
+  0.2
 );
 
-let data = null;
-
-/* ================= FETCH ================= */
-async function fetchData() {
+async function loop() {
   try {
-    const res = await fetch(ENGINE_URL, { cache: "no-store" });
-    data = await res.json();
+    const res = await fetch(API_URL, { cache:"no-store" });
+    const json = await res.json();
+    weeklyReactor(json.weekly);
+    monthlyReactor(json.monthly);
   } catch {}
-}
-
-fetchData();
-setInterval(fetchData, 10000);
-
-/* ================= LOOP ================= */
-function loop() {
-  weeklyReactor.render(data?.weekly?.progress ?? 0);
-  monthlyReactor.render(data?.monthly?.progress ?? 0);
-  requestAnimationFrame(loop);
+  setTimeout(loop, 8000);
 }
 
 loop();
