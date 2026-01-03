@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Dual Reactor – Weekly / Monthly</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.container {
+  width: 420px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+canvas {
+  background: transparent;
+  display: block;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <canvas id="weekly" width="180" height="220"></canvas>
+  <canvas id="monthly" width="180" height="220"></canvas>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const ENGINE_URL =
+  "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
+
+/* ================= REACTOR CLASS ================= */
+class Reactor {
+  constructor(canvas, speedFactor, tint) {
+    this.c = canvas;
+    this.ctx = canvas.getContext("2d", { alpha: true });
+    this.center = { x: canvas.width / 2, y: canvas.height / 2 };
+    this.R = 64;
+    this.IR = 50;
+    this.wave = 0;
+    this.glow = 0;
+    this.speed = speedFactor;
+    this.tint = tint;
+  }
+
+  drawRing(active) {
+    this.glow += 0.015 * this.speed;
+    const breath = active
+      ? 28 + Math.sin(this.glow) * 10
+      : 12;
+
+    this.ctx.beginPath();
+    this.ctx.arc(this.center.x, this.center.y, this.R, 0, Math.PI * 2);
+    this.ctx.strokeStyle = active ? this.tint : "rgba(150,150,150,0.6)";
+    this.ctx.lineWidth = 8;
+    this.ctx.shadowColor = active ? this.tint : "rgba(150,150,150,0.3)";
+    this.ctx.shadowBlur = breath;
+    this.ctx.stroke();
+  }
+
+  drawDepth() {
+    const g = this.ctx.createRadialGradient(
+      this.center.x, this.center.y, this.IR * 0.3,
+      this.center.x, this.center.y, this.IR
+    );
+    g.addColorStop(0, "rgba(255,255,255,0.05)");
+    g.addColorStop(1, "rgba(0,0,0,0.4)");
+
+    this.ctx.beginPath();
+    this.ctx.arc(this.center.x, this.center.y, this.IR, 0, Math.PI * 2);
+    this.ctx.fillStyle = g;
+    this.ctx.fill();
+  }
+
+  drawFuel(level) {
+    if (level <= 0) return;
+
+    const h = this.IR * 2 * level;
+    const baseY = this.center.y + this.IR;
+    const surface = baseY - h;
+
+    this.wave += 0.35 * this.speed;
+
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(this.center.x, this.center.y, this.IR, 0, Math.PI * 2);
+    this.ctx.clip();
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.center.x - this.IR, surface);
+
+    for (let x = -this.IR; x <= this.IR; x++) {
+      const y =
+        Math.sin((x + this.wave) * 0.045) * 3 +
+        Math.sin(this.wave * 0.5 + x * 0.1) * 2;
+      this.ctx.lineTo(this.center.x + x, surface + y);
+    }
+
+    this.ctx.lineTo(this.center.x + this.IR, baseY);
+    this.ctx.lineTo(this.center.x - this.IR, baseY);
+    this.ctx.closePath();
+
+    const grad = this.ctx.createLinearGradient(0, surface, 0, baseY);
+    grad.addColorStop(0, "rgba(190,255,235,0.95)");
+    grad.addColorStop(1, this.tint);
+
+    this.ctx.fillStyle = grad;
+    this.ctx.shadowColor = this.tint;
+    this.ctx.shadowBlur = 14;
+    this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  render(progress) {
+    this.ctx.clearRect(0, 0, this.c.width, this.c.height);
+    this.drawDepth();
+    this.drawRing(progress > 0);
+    this.drawFuel(progress);
+  }
+}
+
+/* ================= INIT ================= */
+const weeklyReactor = new Reactor(
+  document.getElementById("weekly"),
+  1.25,
+  "rgba(120,255,220,0.9)"
+);
+
+const monthlyReactor = new Reactor(
+  document.getElementById("monthly"),
+  0.7,
+  "rgba(90,220,180,0.85)"
+);
+
+let data = null;
+
+/* ================= FETCH ================= */
+async function fetchData() {
+  try {
+    const res = await fetch(ENGINE_URL, { cache: "no-store" });
+    data = await res.json();
+  } catch {}
+}
+
+fetchData();
+setInterval(fetchData, 10000);
+
+/* ================= LOOP ================= */
+function loop() {
+  weeklyReactor.render(data?.weekly?.progress ?? 0);
+  monthlyReactor.render(data?.monthly?.progress ?? 0);
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
