@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Dual Reactor Core</title>
+<title>Dual Reactor Status</title>
 
 <style>
 html, body {
@@ -12,12 +12,13 @@ html, body {
   overflow: hidden;
 }
 
-.container {
+.wrapper {
   width: 520px;
   height: 220px;
   display: flex;
-  justify-content: space-evenly;
+  justify-content: space-between;
   align-items: center;
+  padding: 0 20px;
 }
 
 canvas {
@@ -28,136 +29,181 @@ canvas {
 
 <body>
 
-<div class="container">
+<div class="wrapper">
   <canvas id="weekly" width="220" height="220"></canvas>
   <canvas id="monthly" width="220" height="220"></canvas>
 </div>
 
 <script>
+/* ================= CONFIG ================= */
+
 const API_URL = "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
 
-function Reactor(canvas, palette, motionSpeed) {
-  const ctx = canvas.getContext("2d");
-  const C = { x: canvas.width/2, y: canvas.height/2 };
-  const R = 66;
-  const IR = 52;
+const RADIUS = 66;
+const INNER_RADIUS = 52;
 
-  let wave = 0;
-  let breathe = 0;
+/* ================= STATE ================= */
 
-  function drawDepth() {
-    const g = ctx.createRadialGradient(C.x, C.y, 20, C.x, C.y, IR);
-    g.addColorStop(0, "rgba(255,255,255,0.05)");
-    g.addColorStop(1, "rgba(0,0,0,0.35)");
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
-    ctx.fillStyle = g;
-    ctx.fill();
-  }
+let weeklyData = null;
+let monthlyData = null;
 
-  function drawRing(color, glow, alive) {
-    breathe += alive ? 0.015 : 0.005;
-    const blur = alive ? 28 + Math.sin(breathe)*10 : 12;
+/* ================= CANVAS SETUP ================= */
 
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R, 0, Math.PI*2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 8;
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = blur;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  }
-
-  function drawFuel(level, color) {
-    if (level <= 0) return;
-
-    const h = IR * 2 * level;
-    const base = C.y + IR;
-    const surface = base - h;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
-    ctx.clip();
-
-    ctx.beginPath();
-    ctx.moveTo(C.x - IR, surface);
-    for (let x=-IR; x<=IR; x++) {
-      ctx.lineTo(
-        C.x + x,
-        surface + Math.sin((x+wave)*0.045)*3
-      );
-    }
-    ctx.lineTo(C.x + IR, base);
-    ctx.lineTo(C.x - IR, base);
-    ctx.closePath();
-
-    const g = ctx.createLinearGradient(0, surface, 0, base);
-    g.addColorStop(0, "rgba(200,255,235,0.95)");
-    g.addColorStop(1, color);
-
-    ctx.fillStyle = g;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 14;
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function render(data) {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    drawDepth();
-
-    let state = "IDLE";
-    if (data.hasTrades) {
-      if (data.pl > 0) state = "HEALTHY";
-      else if (data.pl < 0) state = "WARNING";
-      else state = "BREAKEVEN";
-    }
-
-    const styles = {
-      IDLE:     { ring:"#999", glow:"rgba(150,150,150,.3)", fuel:0 },
-      BREAKEVEN:{ ring:palette.ring, glow:palette.glow, fuel:0 },
-      HEALTHY:  { ring:palette.ring, glow:palette.glow, fuel:data.progress },
-      WARNING:  { ring:"rgba(255,170,90,.8)", glow:"rgba(255,170,90,.4)", fuel:0 }
-    };
-
-    const s = styles[state];
-    drawRing(s.ring, s.glow, state==="HEALTHY");
-    drawFuel(s.fuel, palette.fuel);
-
-    wave += motionSpeed;
-    requestAnimationFrame(() => render(data));
-  }
-
-  return render;
+function setup(canvas) {
+  return {
+    canvas,
+    ctx: canvas.getContext("2d", { alpha: true }),
+    center: { x: canvas.width / 2, y: canvas.height / 2 },
+    wave: 0,
+    breathe: 0
+  };
 }
 
-/* ================= INIT ================= */
+const weekly = setup(document.getElementById("weekly"));
+const monthly = setup(document.getElementById("monthly"));
 
-const weeklyReactor = Reactor(
-  document.getElementById("weekly"),
-  { ring:"rgba(120,255,220,1)", glow:"rgba(120,255,220,1)", fuel:"rgba(120,255,220,.7)" },
-  0.35
-);
+/* ================= FETCH (STATE ONLY) ================= */
 
-const monthlyReactor = Reactor(
-  document.getElementById("monthly"),
-  { ring:"rgba(90,220,160,1)", glow:"rgba(90,220,160,1)", fuel:"rgba(90,220,160,.7)" },
-  0.2
-);
-
-async function loop() {
+async function fetchData() {
   try {
-    const res = await fetch(API_URL, { cache:"no-store" });
+    const res = await fetch(API_URL, { cache: "no-store" });
     const json = await res.json();
-    weeklyReactor(json.weekly);
-    monthlyReactor(json.monthly);
+    weeklyData = json.weekly;
+    monthlyData = json.monthly;
   } catch {}
-  setTimeout(loop, 8000);
 }
 
-loop();
+fetchData();
+setInterval(fetchData, 10000);
+
+/* ================= HELPERS ================= */
+
+function clamp(v) {
+  return Math.max(0, Math.min(1, v));
+}
+
+function getProgress(d) {
+  if (!d || !d.hasTrades || !d.target || d.target <= 0) return 0;
+  return clamp(d.pl / d.target);
+}
+
+function getState(d) {
+  if (!d || !d.hasTrades) return "IDLE";
+  if (d.pl < 0) return "WARNING";
+  return d.pl === 0 ? "BREAKEVEN" : "HEALTHY";
+}
+
+/* ================= COLORS ================= */
+
+function palette(type, state) {
+  if (type === "weekly") {
+    return {
+      base: "rgba(120,255,220,1)",
+      glow: state === "IDLE" ? "rgba(120,255,220,0.25)" : "rgba(120,255,220,0.9)"
+    };
+  }
+  return {
+    base: "rgba(90,220,160,1)",
+    glow: state === "IDLE" ? "rgba(90,220,160,0.25)" : "rgba(90,220,160,0.9)"
+  };
+}
+
+/* ================= DRAWING ================= */
+
+function drawRing(r, colors) {
+  const { ctx, center } = r;
+
+  r.breathe += 0.015;
+  const glow = 26 + Math.sin(r.breathe) * 6;
+
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, RADIUS, 0, Math.PI * 2);
+  ctx.strokeStyle = colors.base;
+  ctx.lineWidth = 8;
+  ctx.shadowColor = colors.glow;
+  ctx.shadowBlur = glow;
+  ctx.stroke();
+}
+
+function drawDepth(r) {
+  const { ctx, center } = r;
+
+  const g = ctx.createRadialGradient(
+    center.x, center.y, INNER_RADIUS * 0.3,
+    center.x, center.y, INNER_RADIUS
+  );
+  g.addColorStop(0, "rgba(255,255,255,0.05)");
+  g.addColorStop(1, "rgba(0,0,0,0.35)");
+
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+}
+
+function drawFuel(r, level, color, speed) {
+  if (level <= 0) return;
+
+  const { ctx, center } = r;
+  r.wave += speed;
+
+  const baseY = center.y + INNER_RADIUS;
+  const h = INNER_RADIUS * 2 * level;
+  const surface = baseY - h;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.beginPath();
+  ctx.moveTo(center.x - INNER_RADIUS, surface);
+  for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
+    const y = Math.sin((x + r.wave) * 0.045) * 3;
+    ctx.lineTo(center.x + x, surface + y);
+  }
+  ctx.lineTo(center.x + INNER_RADIUS, baseY);
+  ctx.lineTo(center.x - INNER_RADIUS, baseY);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, surface, 0, baseY);
+  grad.addColorStop(0, "rgba(200,255,235,0.95)");
+  grad.addColorStop(1, color);
+
+  ctx.fillStyle = grad;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* ================= MAIN LOOP (ONE ONLY) ================= */
+
+function render() {
+  weekly.ctx.clearRect(0,0,220,220);
+  monthly.ctx.clearRect(0,0,220,220);
+
+  if (weeklyData) {
+    const state = getState(weeklyData);
+    const colors = palette("weekly", state);
+    drawDepth(weekly);
+    drawRing(weekly, colors);
+    drawFuel(weekly, getProgress(weeklyData), colors.base, 0.35);
+  }
+
+  if (monthlyData) {
+    const state = getState(monthlyData);
+    const colors = palette("monthly", state);
+    drawDepth(monthly);
+    drawRing(monthly, colors);
+    drawFuel(monthly, getProgress(monthlyData), colors.base, 0.2);
+  }
+
+  requestAnimationFrame(render);
+}
+
+render(); // 🔒 SINGLE LOOP
 </script>
 
 </body>
