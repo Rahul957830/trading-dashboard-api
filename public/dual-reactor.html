@@ -67,6 +67,22 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
+  /* ----- BURST BUBBLES ----- */
+  const bursts = [];
+  let lastBurst = 0;
+
+  function spawnBurst(surfaceY) {
+    for (let i = 0; i < 4 + Math.floor(Math.random() * 2); i++) {
+      bursts.push({
+        x: (Math.random() * 2 - 1) * IR * 0.4,
+        y: surfaceY,
+        r: 1.6 + Math.random() * 0.6,
+        vy: 0.35 + Math.random() * 0.2,
+        life: 1
+      });
+    }
+  }
+
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -100,17 +116,16 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
     ctx.clip();
 
-    for (let i = 0; i < 110; i++) {
+    for (let i = 0; i < 100; i++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.random() * IR;
       const flicker = (Math.sin(shimmerSeed + r * 0.08) + 1) * 0.5;
-
-      ctx.fillStyle = `rgba(255,255,255,${0.012 * flicker})`;
+      ctx.fillStyle = `rgba(255,255,255,${0.01 * flicker})`;
       ctx.fillRect(
         C.x + Math.cos(a) * r,
         C.y + Math.sin(a) * r,
-        1.1,
-        1.1
+        1,
+        1
       );
     }
     ctx.restore();
@@ -125,7 +140,6 @@ function Reactor(canvas, baseColor, warningColor) {
       ringColor = "rgba(170,170,170,0.95)";
     }
 
-    // Outer soft halo
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
@@ -137,7 +151,6 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    // Main tube body
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
@@ -148,23 +161,19 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    // Inner glass highlight
-    ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 3.5, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = 1.6;
-    ctx.globalAlpha = 0.9;
     ctx.stroke();
-    ctx.restore();
 
-    /* -------- FUEL -------- */
+    /* -------- FUEL + BURST BUBBLES -------- */
     if (state === "HEALTHY" && progress > 0) {
       wave += 0.062;
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
-      const topY = baseY - h;
+      const surfaceY = baseY - h;
 
       ctx.save();
       ctx.beginPath();
@@ -175,13 +184,13 @@ function Reactor(canvas, baseColor, warningColor) {
       for (let x = -IR; x <= IR; x++) {
         const w1 = Math.sin(x * 0.08 + wave) * 3.2;
         const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2.4;
-        ctx.lineTo(C.x + x, topY + w1 + w2);
+        ctx.lineTo(C.x + x, surfaceY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
       ctx.lineTo(C.x - IR, baseY);
       ctx.closePath();
 
-      const fuelGrad = ctx.createLinearGradient(0, topY, 0, baseY);
+      const fuelGrad = ctx.createLinearGradient(0, surfaceY, 0, baseY);
       fuelGrad.addColorStop(0, "rgba(210,255,240,0.95)");
       fuelGrad.addColorStop(1, baseColor);
 
@@ -190,6 +199,31 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.shadowBlur = 16;
       ctx.fill();
       ctx.restore();
+
+      const now = performance.now();
+      if (now - lastBurst > 6000 + Math.random() * 6000) {
+        lastBurst = now;
+        spawnBurst(surfaceY);
+      }
+
+      for (let i = bursts.length - 1; i >= 0; i--) {
+        const b = bursts[i];
+        b.y -= b.vy;
+        b.life -= 0.015;
+
+        ctx.globalAlpha = b.life;
+        ctx.beginPath();
+        ctx.arc(C.x + b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fillStyle = baseColor;
+        ctx.shadowColor = baseColor;
+        ctx.shadowBlur = 6;
+        ctx.fill();
+
+        if (b.life <= 0 || b.y < surfaceY - 24) {
+          bursts.splice(i, 1);
+        }
+      }
+      ctx.globalAlpha = 1;
     }
   };
 }
