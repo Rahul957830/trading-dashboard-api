@@ -67,21 +67,6 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
-  const burstBubbles = [];
-  let lastBurst = 0;
-
-  function spawnBurst(surfaceY) {
-    for (let i = 0; i < 5; i++) {
-      burstBubbles.push({
-        x: (Math.random() * 2 - 1) * IR * 0.25,
-        y: surfaceY,
-        r: 1.6 + Math.random() * 0.6,
-        vy: 0.4 + Math.random() * 0.25,
-        life: 1
-      });
-    }
-  }
-
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -108,15 +93,14 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- NOISE SHIMMER -------- */
+    /* -------- NOISE SHIMMER (CORE) -------- */
     shimmerSeed += 0.015;
-
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
     ctx.clip();
 
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 110; i++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.random() * IR;
       const flicker = (Math.sin(shimmerSeed + r * 0.08) + 1) * 0.5;
@@ -125,8 +109,8 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.fillRect(
         C.x + Math.cos(a) * r,
         C.y + Math.sin(a) * r,
-        1.2,
-        1.2
+        1.1,
+        1.1
       );
     }
     ctx.restore();
@@ -151,20 +135,30 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
+    /* -------- RING MICRO SHIMMER (NEW) -------- */
+    if (Math.random() < 0.25) { // sparse, not constant
+      const angle = Math.random() * Math.PI * 2;
+      const shimmerAlpha = 0.06 + Math.random() * 0.05;
+
+      ctx.beginPath();
+      ctx.arc(
+        C.x,
+        C.y,
+        R,
+        angle,
+        angle + Math.PI * (0.015 + Math.random() * 0.02)
+      );
+      ctx.strokeStyle = `rgba(255,255,255,${shimmerAlpha})`;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+
+    /* -------- INNER RING REFLECTION -------- */
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    /* -------- TEXTURE -------- */
-    const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
-    tex.addColorStop(0, "rgba(255,255,255,0.05)");
-    tex.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = tex;
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
-    ctx.fill();
 
     /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
@@ -197,42 +191,7 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.shadowColor = baseColor;
       ctx.shadowBlur = 16;
       ctx.fill();
-
-      /* ---- SURFACE FOG ---- */
-      const fogGrad = ctx.createLinearGradient(0, topY - 4, 0, topY + 6);
-      fogGrad.addColorStop(0, "rgba(210,255,240,0)");
-      fogGrad.addColorStop(0.45, "rgba(210,255,240,0.12)");
-      fogGrad.addColorStop(1, "rgba(210,255,240,0)");
-      ctx.fillStyle = fogGrad;
-      ctx.fill();
-
       ctx.restore();
-
-      /* ---- BURST BUBBLES (AIR ONLY) ---- */
-      const now = performance.now();
-      if (now - lastBurst > 9000) {
-        lastBurst = now;
-        spawnBurst(topY);
-      }
-    }
-
-    /* -------- DRAW BURST BUBBLES -------- */
-    for (let i = burstBubbles.length - 1; i >= 0; i--) {
-      const b = burstBubbles[i];
-      b.y -= b.vy;
-      b.life -= 0.02;
-
-      if (b.life <= 0) {
-        burstBubbles.splice(i, 1);
-        continue;
-      }
-
-      ctx.globalAlpha = b.life * 0.35;
-      ctx.beginPath();
-      ctx.arc(C.x + b.x, b.y, b.r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(200,255,240,1)";
-      ctx.fill();
-      ctx.globalAlpha = 1;
     }
   };
 }
