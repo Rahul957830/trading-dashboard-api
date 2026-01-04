@@ -46,7 +46,7 @@ async function fetchData() {
 fetchData();
 setInterval(fetchData, 10000);
 
-/* ================= SHARED PHASES (CRITICAL FIX) ================= */
+/* ================= SHARED PHASES ================= */
 let glowPhase = 0;
 let waveOffset = 0;
 let heatPhase = 0;
@@ -79,7 +79,7 @@ function Reactor(canvas) {
     const progress = clamp(stats.progress || 0);
 
     /* -------- INNER CORE -------- */
-    const innerGlow = 14 + Math.sin(glowPhase) * 10;
+    const innerGlow = 18 + Math.sin(glowPhase) * 14;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
@@ -119,7 +119,7 @@ function Reactor(canvas) {
     ctx.restore();
 
     /* -------- RING -------- */
-    const breathing = 30 + Math.sin(glowPhase) * 16;
+    const breathing = 38 + Math.sin(glowPhase) * 22;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -182,9 +182,8 @@ function loop() {
     monthly(data.monthly);
   }
 
-  /* EXACT SAME SPEEDS AS SINGLE REACTOR */
-  glowPhase += 0.02;
-  waveOffset += 0.35;
+  glowPhase += 0.02;     // calm breathing
+  waveOffset += 0.18;   // SLOWED fuel motion
   heatPhase += 0.04;
   boilPhase += 0.01;
 
