@@ -62,32 +62,26 @@ function Reactor(canvas, baseColor, warningColor) {
   const R = 64;
   const IR = 50;
 
-  // animation state
   let wave = 0;
   let pulse = 0;
   let coreBreath = 0;
   let shimmer = 0;
-
-  // timing
   let lastTime = performance.now();
 
   return function render(stats) {
     const now = performance.now();
-    let delta = (now - lastTime) / 1000; // seconds
+    let delta = (now - lastTime) / 1000;
     lastTime = now;
-
-    // -------- NOTION SAFETY CLAMP --------
-    // prevents iframe burst acceleration
-    delta = Math.min(delta, 0.035); // ~28 FPS cap effect
+    delta = Math.min(delta, 0.035); // Notion safety
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* ===== INNER CORE (BREATHING) ===== */
-    coreBreath += delta * 2.2;
-    const innerGlow = 14 + Math.sin(coreBreath) * 10;
+    /* ===== CORE BREATH ===== */
+    coreBreath += delta * 3.0;
+    const innerGlow = 16 + Math.sin(coreBreath) * 14;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
@@ -105,9 +99,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* ===== NOISE SHIMMER (REPLACES HEAT RINGS) ===== */
-    shimmer += delta * 0.8;
-
+    /* ===== NOISE SHIMMER ===== */
+    shimmer += delta * 0.9;
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
@@ -117,8 +110,8 @@ function Reactor(canvas, baseColor, warningColor) {
       const r = IR * (0.45 + i * 0.18);
       const a = 0.015 + i * 0.01;
       const jitter =
-        Math.sin(shimmer + i * 2.3) * 1.2 +
-        Math.sin(shimmer * 0.7 + i) * 0.8;
+        Math.sin(shimmer + i * 2.3) * 1.4 +
+        Math.sin(shimmer * 0.7 + i) * 1.0;
 
       ctx.beginPath();
       ctx.arc(C.x + jitter, C.y, r, 0, Math.PI * 2);
@@ -129,8 +122,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* ===== RING ===== */
-    pulse += delta * 2.0;
-    const breathing = 30 + Math.sin(pulse) * 12;
+    pulse += delta * 3.2;
+    const breathing = 32 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -148,7 +141,6 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    // reflective inner rim
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
@@ -157,7 +149,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* ===== FUEL ===== */
     if (state === "HEALTHY" && progress > 0) {
-      wave += delta * 1.4;
+      wave += delta * 2.0;
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
