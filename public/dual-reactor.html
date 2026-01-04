@@ -74,7 +74,7 @@ function Reactor(canvas, baseColor, warningColor) {
     const progress = clamp(stats.progress || 0);
 
     /* -------- INNER CORE -------- */
-    coreBreath += 0.022; // 🔧 slightly increased
+    coreBreath += 0.07; // ↑ increased
     const innerGlow = 14 + Math.sin(coreBreath) * 10;
 
     const coreGrad = ctx.createRadialGradient(
@@ -94,7 +94,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* -------- HEAT DISTORTION -------- */
-    heatDistort += 0.009; // 🔧 slightly increased
+    heatDistort += 0.023; // ↑ increased
 
     ctx.save();
     ctx.beginPath();
@@ -117,7 +117,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* -------- RING -------- */
-    pulse += 0.036; // 🔧 slightly increased
+    pulse += 0.115; // ↑ increased
     const breathing = 30 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
@@ -153,7 +153,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
-      wave += 0.024; // 🔧 slightly increased
+      wave += 0.062; // ↑ increased
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
