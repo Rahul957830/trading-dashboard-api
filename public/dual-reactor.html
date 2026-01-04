@@ -50,7 +50,6 @@ setInterval(fetchData, 10000);
 let glowPhase = 0;
 let waveOffset = 0;
 let heatPhase = 0;
-let boilPhase = 0;
 
 /* ================= HELPERS ================= */
 const clamp = v => Math.max(0, Math.min(1, v));
@@ -103,17 +102,17 @@ function Reactor(canvas) {
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
     ctx.clip();
 
-    for (let i = 0; i < 4; i++) {
-      const radius = IR * (0.35 + i * 0.15);
-      const alpha = 0.03 + i * 0.015;
+    for (let i = 0; i < 3; i++) {
+      const radius = IR * (0.4 + i * 0.18);
+      const alpha = 0.025 + i * 0.01;
       const wobble =
-        Math.sin(heatPhase + i * 1.3) * 2.5 +
-        Math.sin(heatPhase * 0.6 + i) * 2;
+        Math.sin(heatPhase + i * 1.3) * 1.6 +
+        Math.sin(heatPhase * 0.6 + i) * 1.2;
 
       ctx.beginPath();
       ctx.arc(C.x + wobble, C.y, radius, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
     }
     ctx.restore();
@@ -150,8 +149,8 @@ function Reactor(canvas) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.08 + waveOffset) * 3.2;
-        const w2 = Math.sin(x * 0.14 + waveOffset * 1.6) * 2.4;
+        const w1 = Math.sin(x * 0.06 + waveOffset) * 2.0;
+        const w2 = Math.sin(x * 0.10 + waveOffset * 1.2) * 1.4;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -164,7 +163,7 @@ function Reactor(canvas) {
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 14;
       ctx.fill();
       ctx.restore();
     }
@@ -182,10 +181,9 @@ function loop() {
     monthly(data.monthly);
   }
 
-  glowPhase += 0.02;     // calm breathing
-  waveOffset += 0.18;   // SLOWED fuel motion
-  heatPhase += 0.04;
-  boilPhase += 0.01;
+  glowPhase += 0.02;
+  waveOffset += 0.10;
+  heatPhase += 0.025;
 
   requestAnimationFrame(loop);
 }
