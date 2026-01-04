@@ -67,7 +67,7 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
-  /* ---- BURST BUBBLES ---- */
+  /* ---- BURST BUBBLES (CLEAN) ---- */
   const bursts = [];
   let lastBurst = performance.now();
 
@@ -76,9 +76,9 @@ function Reactor(canvas, baseColor, warningColor) {
     for (let i = 0; i < count; i++) {
       bursts.push({
         x: (Math.random() * 2 - 1) * IR * 0.35,
-        y: surfaceY + Math.random() * 3,
-        r: 1.4 + Math.random() * 0.6,
-        vy: 0.5 + Math.random() * 0.3,
+        y: surfaceY,
+        r: 1.6 + Math.random() * 0.4,
+        vy: 0.45 + Math.random() * 0.25,
         life: 1
       });
     }
@@ -152,8 +152,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    /* -------- RING SHIMMER (HEALTHY ONLY) -------- */
-    if (state === "HEALTHY" && Math.random() < 0.35) {
+    /* -------- RING SHIMMER (VISIBLE, NON-SNAKE) -------- */
+    if (state === "HEALTHY" && Math.random() < 0.45) {
       const angle = Math.random() * Math.PI * 2;
       ctx.beginPath();
       ctx.arc(
@@ -161,10 +161,10 @@ function Reactor(canvas, baseColor, warningColor) {
         C.y,
         R,
         angle,
-        angle + Math.PI * (0.02 + Math.random() * 0.02)
+        angle + Math.PI * (0.035 + Math.random() * 0.02)
       );
-      ctx.strokeStyle = "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.lineWidth = 1.6;
       ctx.stroke();
     }
 
@@ -208,7 +208,7 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.fill();
       ctx.restore();
 
-      /* ---- BURST BUBBLES ---- */
+      /* ---- BURST BUBBLES (NO SPARKLE) ---- */
       const now = performance.now();
       if (now - lastBurst > 6000 + Math.random() * 6000) {
         lastBurst = now;
@@ -218,15 +218,15 @@ function Reactor(canvas, baseColor, warningColor) {
       for (let i = bursts.length - 1; i >= 0; i--) {
         const b = bursts[i];
         b.y -= b.vy;
-        b.life -= 0.02;
+        b.life -= 0.018;
 
-        ctx.globalAlpha = b.life * 0.6;
+        ctx.globalAlpha = Math.max(0, b.life * 0.5);
         ctx.beginPath();
-        ctx.arc(C.x + b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.arc(C.x + b.x, b.y, b.r * b.life, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(200,255,240,1)";
         ctx.fill();
 
-        if (b.life <= 0 || b.y < C.y - IR - 20) {
+        if (b.life <= 0 || b.y < C.y - IR - 24) {
           bursts.splice(i, 1);
         }
       }
