@@ -67,23 +67,6 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
-  /* ---- BURST BUBBLES (SAFE) ---- */
-  const bursts = [];
-  let lastBurst = performance.now();
-
-  function spawnBurst(surfaceY) {
-    const count = 4 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < count; i++) {
-      bursts.push({
-        x: (Math.random() * 2 - 1) * IR * 0.35,
-        y: surfaceY,
-        r: 1.6 + Math.random() * 0.4,
-        vy: 0.45 + Math.random() * 0.25,
-        life: 1
-      });
-    }
-  }
-
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -132,7 +115,7 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- RING -------- */
+    /* -------- GLASS TUBE RING -------- */
     pulse += 0.115;
     const breathing = 30 + Math.sin(pulse) * 16;
 
@@ -142,31 +125,38 @@ function Reactor(canvas, baseColor, warningColor) {
       ringColor = "rgba(170,170,170,0.95)";
     }
 
+    // Outer soft halo
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 11;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur = breathing * 1.2;
+    ctx.globalAlpha = 0.35;
+    ctx.stroke();
+    ctx.restore();
+
+    // Main tube body
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
     ctx.strokeStyle = ringColor;
     ctx.lineWidth = 7.5;
-    ctx.shadowColor = ringColor;
-    ctx.shadowBlur = breathing;
+    ctx.shadowBlur = breathing * 0.6;
+    ctx.globalAlpha = 0.85;
     ctx.stroke();
     ctx.restore();
 
-    /* -------- RING SHIMMER -------- */
-    if (state === "HEALTHY" && Math.random() < 0.45) {
-      const angle = Math.random() * Math.PI * 2;
-      ctx.beginPath();
-      ctx.arc(
-        C.x,
-        C.y,
-        R,
-        angle,
-        angle + Math.PI * (0.035 + Math.random() * 0.02)
-      );
-      ctx.strokeStyle = "rgba(255,255,255,0.18)";
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-    }
+    // Inner glass highlight
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R - 3.5, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.restore();
 
     /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
@@ -200,32 +190,6 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.shadowBlur = 16;
       ctx.fill();
       ctx.restore();
-
-      /* ---- BURST BUBBLES (NO SPARKLE, NO CRASH) ---- */
-      const now = performance.now();
-      if (now - lastBurst > 6000 + Math.random() * 6000) {
-        lastBurst = now;
-        spawnBurst(topY);
-      }
-
-      for (let i = bursts.length - 1; i >= 0; i--) {
-        const b = bursts[i];
-        b.y -= b.vy;
-        b.life -= 0.018;
-
-        if (b.life <= 0) {
-          bursts.splice(i, 1);
-          continue;
-        }
-
-        const radius = Math.max(0.3, b.r * b.life);
-        ctx.globalAlpha = Math.max(0, b.life * 0.5);
-        ctx.beginPath();
-        ctx.arc(C.x + b.x, b.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(200,255,240,1)";
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
     }
   };
 }
