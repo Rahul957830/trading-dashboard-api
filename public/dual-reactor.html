@@ -62,19 +62,31 @@ function Reactor(canvas, baseColor, warningColor) {
   const R = 64;
   const IR = 50;
 
+  // animation state
   let wave = 0;
   let pulse = 0;
   let coreBreath = 0;
-  let shimmerSeed = Math.random() * 1000;
+  let shimmer = 0;
+
+  // timing
+  let lastTime = performance.now();
 
   return function render(stats) {
+    const now = performance.now();
+    let delta = (now - lastTime) / 1000; // seconds
+    lastTime = now;
+
+    // -------- NOTION SAFETY CLAMP --------
+    // prevents iframe burst acceleration
+    delta = Math.min(delta, 0.035); // ~28 FPS cap effect
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* -------- INNER CORE -------- */
-    coreBreath += 0.07;
+    /* ===== INNER CORE (BREATHING) ===== */
+    coreBreath += delta * 2.2;
     const innerGlow = 14 + Math.sin(coreBreath) * 10;
 
     const coreGrad = ctx.createRadialGradient(
@@ -93,33 +105,32 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- NOISE SHIMMER (REPLACES HEAT RINGS) -------- */
-    shimmerSeed += 0.015;
+    /* ===== NOISE SHIMMER (REPLACES HEAT RINGS) ===== */
+    shimmer += delta * 0.8;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
     ctx.clip();
 
-    for (let i = 0; i < 120; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * IR;
-      const flicker = (Math.sin(shimmerSeed + r * 0.08) + 1) * 0.5;
+    for (let i = 0; i < 3; i++) {
+      const r = IR * (0.45 + i * 0.18);
+      const a = 0.015 + i * 0.01;
+      const jitter =
+        Math.sin(shimmer + i * 2.3) * 1.2 +
+        Math.sin(shimmer * 0.7 + i) * 0.8;
 
-      ctx.fillStyle = `rgba(255,255,255,${0.012 * flicker})`;
-      ctx.fillRect(
-        C.x + Math.cos(a) * r,
-        C.y + Math.sin(a) * r,
-        1.2,
-        1.2
-      );
+      ctx.beginPath();
+      ctx.arc(C.x + jitter, C.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${a})`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
     }
-
     ctx.restore();
 
-    /* -------- RING -------- */
-    pulse += 0.115;
-    const breathing = 30 + Math.sin(pulse) * 16;
+    /* ===== RING ===== */
+    pulse += delta * 2.0;
+    const breathing = 30 + Math.sin(pulse) * 12;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -137,24 +148,16 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
+    // reflective inner rim
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    /* -------- TEXTURE -------- */
-    const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
-    tex.addColorStop(0, "rgba(255,255,255,0.05)");
-    tex.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = tex;
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    /* -------- FUEL -------- */
+    /* ===== FUEL ===== */
     if (state === "HEALTHY" && progress > 0) {
-      wave += 0.062;
+      wave += delta * 1.4;
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
@@ -167,8 +170,8 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.08 + wave) * 3.2;
-        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2.4;
+        const w1 = Math.sin(x * 0.08 + wave) * 3;
+        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -181,7 +184,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 14;
       ctx.fill();
       ctx.restore();
     }
