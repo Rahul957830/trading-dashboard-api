@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Dual Reactor Control</title>
+<title>Trading Reactors</title>
 
 <style>
 html, body {
@@ -11,158 +11,255 @@ html, body {
   background: transparent;
   overflow: hidden;
 }
-.container {
-  width: 520px;
-  height: 220px;
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  justify-content: center;
+
+canvas {
+  display: block;
 }
-canvas { background: transparent; }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <canvas id="weekly" width="240" height="220"></canvas>
-  <canvas id="monthly" width="240" height="220"></canvas>
-</div>
+<canvas id="c" width="520" height="260"></canvas>
 
 <script>
-const API = "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
-const canvases = {
-  weekly: document.getElementById("weekly"),
-  monthly: document.getElementById("monthly")
-};
+/* ======================================================
+   CONFIG
+====================================================== */
+
+const ENGINE_URL =
+  "https://trading-dashboard-api-five.vercel.app/api/engine-ui?t=";
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const REACTOR_RADIUS = 58;
+const INNER_RADIUS = 44;
+const WEEKLY_X = 170;
+const MONTHLY_X = 350;
+const CENTER_Y = 130;
+
+/* ======================================================
+   STATE
+====================================================== */
 
 let data = null;
-let lastFetch = 0;
+let glowPhase = 0;
+let corePhase = 0;
+let wavePhaseA = 0;
+let wavePhaseB = 0;
+
+/* burst bubbles */
+const burstBubbles = [];
+let lastBurst = 0;
+
+/* ======================================================
+   FETCH
+====================================================== */
 
 async function fetchData() {
   try {
-    const r = await fetch(API + "?t=" + Date.now(), { cache: "no-store" });
-    data = await r.json();
+    const res = await fetch(ENGINE_URL + Date.now(), { cache: "no-store" });
+    data = await res.json();
   } catch {}
 }
+
 fetchData();
 setInterval(fetchData, 10000);
 
-/* ================= HELPERS ================= */
+/* ======================================================
+   HELPERS
+====================================================== */
 
-function clamp(v) { return Math.max(0, Math.min(1, v)); }
+function clamp(v) {
+  return Math.max(0, Math.min(1, v));
+}
 
-function resolveState(d) {
+function spawnBurst(cx, surfaceY, color) {
+  burstBubbles.push({
+    x: cx,
+    y: surfaceY,
+    r: 2.6 + Math.random() * 0.6,
+    life: 1,
+    speed: 0.6 + Math.random() * 0.2,
+    color
+  });
+}
+
+/* ======================================================
+   COLOR RULES
+====================================================== */
+
+function getBaseColor(type) {
+  return type === "weekly"
+    ? "rgba(110,255,215,1)"
+    : "rgba(120,235,170,1)";
+}
+
+function getState(d) {
   if (!d.hasTrades) return "IDLE";
   if (d.pl < 0) return "WARNING";
   if (d.pl === 0) return "BREAKEVEN";
   return "HEALTHY";
 }
 
-/* ================= REACTOR ================= */
+/* ======================================================
+   DRAW FUNCTIONS
+====================================================== */
 
-function Reactor(canvas, baseColor, warningColor, speedFactor) {
-  const ctx = canvas.getContext("2d");
-  const C = { x: canvas.width/2, y: canvas.height/2 };
-  const R = 64;
-  const IR = 50;
+function drawInnerCore(cx) {
+  corePhase += 0.05;
 
-  let glow = 0;
-  let wave = 0;
-  let innerPulse = 0;
+  const g = ctx.createRadialGradient(
+    cx, CENTER_Y, 6,
+    cx, CENTER_Y, INNER_RADIUS
+  );
 
-  return function render(stats) {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+  g.addColorStop(0, "rgba(255,255,255,0.12)");
+  g.addColorStop(1, "rgba(0,0,0,0.45)");
 
-    const state = resolveState(stats);
-    const progress = clamp(stats.progress || 0);
+  ctx.beginPath();
+  ctx.arc(cx, CENTER_Y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+}
 
-    // INNER CORE (always breathing)
-    innerPulse += 0.02;
-    const coreGlow = 8 + Math.sin(innerPulse) * 4;
-    const g = ctx.createRadialGradient(C.x, C.y, 10, C.x, C.y, IR);
-    g.addColorStop(0, "rgba(255,255,255,0.08)");
-    g.addColorStop(1, "rgba(0,0,0,0.4)");
+function drawRing(cx, color, glowStrength) {
+  glowPhase += 0.035;
+
+  const breathing =
+    glowStrength === "strong"
+      ? 22 + Math.sin(glowPhase) * 12
+      : 16 + Math.sin(glowPhase) * 8;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, CENTER_Y, REACTOR_RADIUS, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 7;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = breathing;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTicks(cx) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.lineWidth = 1;
+
+  [0.25, 0.5, 0.75].forEach(p => {
+    const y = CENTER_Y + INNER_RADIUS - INNER_RADIUS * 2 * p;
     ctx.beginPath();
-    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
-    ctx.fillStyle = g;
-    ctx.shadowColor = baseColor;
-    ctx.shadowBlur = coreGlow;
-    ctx.fill();
-
-    // RING
-    glow += state === "HEALTHY" ? 0.05*speedFactor : 0.02;
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R, 0, Math.PI*2);
-    ctx.lineWidth = 8;
-
-    let ringColor = baseColor;
-    if (state === "WARNING") ringColor = warningColor;
-    if (state === "IDLE") ringColor = "rgba(170,170,170,0.9)";
-
-    ctx.strokeStyle = ringColor;
-    ctx.shadowColor = ringColor;
-    ctx.shadowBlur = state === "HEALTHY" ? 28 : 12;
+    ctx.moveTo(cx - 10, y);
+    ctx.lineTo(cx + 10, y);
     ctx.stroke();
+  });
 
-    // FUEL
-    if (state === "HEALTHY" && progress > 0) {
-      wave += 0.04 * speedFactor;
-      const h = IR*2*progress;
-      const baseY = C.y + IR;
-      const topY = baseY - h;
+  ctx.restore();
+}
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
-      ctx.clip();
+function drawFuel(cx, progress, color, state) {
+  if (progress <= 0) return;
 
-      ctx.beginPath();
-      for (let x=-IR;x<=IR;x++) {
-        const w1 = Math.sin(x*0.06 + wave)*3;
-        const w2 = Math.sin(x*0.12 + wave*1.7)*2;
-        ctx.lineTo(C.x+x, topY + w1 + w2);
-      }
-      ctx.lineTo(C.x+IR, baseY);
-      ctx.lineTo(C.x-IR, baseY);
-      ctx.closePath();
+  const h = INNER_RADIUS * 2 * progress;
+  const baseY = CENTER_Y + INNER_RADIUS;
+  const surfaceY = baseY - h;
 
-      const fg = ctx.createLinearGradient(0,topY,0,baseY);
-      fg.addColorStop(0,"rgba(220,255,245,0.95)");
-      fg.addColorStop(1,baseColor);
-      ctx.fillStyle = fg;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = baseColor;
-      ctx.fill();
-      ctx.restore();
-    }
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, CENTER_Y, INNER_RADIUS, 0, Math.PI * 2);
+  ctx.clip();
+
+  wavePhaseA += 0.06;
+  wavePhaseB += 0.035;
+
+  ctx.beginPath();
+  ctx.moveTo(cx - INNER_RADIUS, surfaceY);
+
+  for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
+    const w1 = Math.sin((x * 0.08) + wavePhaseA) * 2.2;
+    const w2 = Math.sin((x * 0.15) + wavePhaseB) * 1.4;
+    ctx.lineTo(cx + x, surfaceY + w1 + w2);
+  }
+
+  ctx.lineTo(cx + INNER_RADIUS, baseY);
+  ctx.lineTo(cx - INNER_RADIUS, baseY);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, surfaceY, 0, baseY);
+  grad.addColorStop(0, "rgba(200,255,235,0.95)");
+  grad.addColorStop(1, color);
+
+  ctx.fillStyle = grad;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 16;
+  ctx.fill();
+
+  ctx.restore();
+
+  /* burst bubbles ABOVE surface only */
+  const now = performance.now();
+  if (state === "HEALTHY" && now - lastBurst > 6000 + Math.random() * 4000) {
+    lastBurst = now;
+    spawnBurst(cx, surfaceY - 2, color);
   }
 }
 
-/* ================= INIT ================= */
+function drawBurstBubbles() {
+  for (let i = burstBubbles.length - 1; i >= 0; i--) {
+    const b = burstBubbles[i];
+    ctx.save();
+    ctx.globalAlpha = b.life * 0.4;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = b.color;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.restore();
 
-const weeklyReactor = Reactor(
-  canvases.weekly,
-  "rgba(120,255,220,0.9)",
-  "rgba(160,60,60,0.9)",
-  1.2
-);
+    b.y -= b.speed;
+    b.life -= 0.02;
 
-const monthlyReactor = Reactor(
-  canvases.monthly,
-  "rgba(90,200,150,0.9)",
-  "rgba(160,60,60,0.9)",
-  0.7
-);
+    if (b.life <= 0) burstBubbles.splice(i, 1);
+  }
+}
 
-function loop() {
+/* ======================================================
+   MAIN LOOP
+====================================================== */
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   if (data) {
-    weeklyReactor(data.weekly);
-    monthlyReactor(data.monthly);
+    [["weekly", WEEKLY_X], ["monthly", MONTHLY_X]].forEach(([key, cx]) => {
+      const d = data[key];
+      const state = getState(d);
+      const baseColor = getBaseColor(key);
+
+      drawInnerCore(cx);
+      drawRing(
+        cx,
+        state === "WARNING"
+          ? "rgba(210,140,90,1)"
+          : state === "IDLE" || state === "BREAKEVEN"
+            ? "rgba(180,180,180,0.9)"
+            : baseColor,
+        state === "HEALTHY" ? "strong" : "soft"
+      );
+
+      drawTicks(cx);
+      drawFuel(cx, clamp(d.progress || 0), baseColor, state);
+    });
   }
-  requestAnimationFrame(loop);
+
+  drawBurstBubbles();
+
+  requestAnimationFrame(render);
 }
-loop();
+
+render();
 </script>
 </body>
 </html>
