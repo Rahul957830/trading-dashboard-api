@@ -73,8 +73,8 @@ function Reactor(canvas, baseColor, warningColor) {
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* -------- INNER CORE (ALWAYS BREATHING) -------- */
-    coreBreath += 0.06;
+    /* -------- INNER CORE -------- */
+    coreBreath += 0.07; // ↑ increased
     const innerGlow = 14 + Math.sin(coreBreath) * 10;
 
     const coreGrad = ctx.createRadialGradient(
@@ -93,8 +93,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- HEAT DISTORTION (NOTICEABLE ALWAYS) -------- */
-    heatDistort += 0.02;
+    /* -------- HEAT DISTORTION -------- */
+    heatDistort += 0.023; // ↑ increased
 
     ctx.save();
     ctx.beginPath();
@@ -117,7 +117,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* -------- RING -------- */
-    pulse += 0.1;
+    pulse += 0.115; // ↑ increased
     const breathing = 30 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
@@ -136,14 +136,13 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    // inner reflective boundary
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    /* -------- TEXTURE (STRONGER) -------- */
+    /* -------- TEXTURE -------- */
     const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
     tex.addColorStop(0, "rgba(255,255,255,0.05)");
     tex.addColorStop(1, "rgba(255,255,255,0)");
@@ -152,9 +151,9 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
     ctx.fill();
 
-    /* -------- FUEL (HEALTHY ONLY) -------- */
+    /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
-      wave += 0.055;
+      wave += 0.062; // ↑ increased
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
@@ -188,7 +187,7 @@ function Reactor(canvas, baseColor, warningColor) {
   };
 }
 
-/* ================= INIT (IDENTICAL REACTORS) ================= */
+/* ================= INIT ================= */
 const weekly = Reactor(
   document.getElementById("weekly"),
   "rgba(90,200,150,0.95)",
