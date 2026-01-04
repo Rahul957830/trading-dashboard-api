@@ -80,8 +80,8 @@ function Reactor(canvas, baseColor, warningColor) {
     const progress = clamp(stats.progress || 0);
 
     /* ===== CORE BREATH ===== */
-    coreBreath += delta * 3.0;
-    const innerGlow = 16 + Math.sin(coreBreath) * 14;
+    coreBreath += delta * 3.2;
+    const innerGlow = 18 + Math.sin(coreBreath) * 16;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
@@ -122,8 +122,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* ===== RING ===== */
-    pulse += delta * 3.2;
-    const breathing = 32 + Math.sin(pulse) * 16;
+    pulse += delta * 3.5;
+    const breathing = 34 + Math.sin(pulse) * 18;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
