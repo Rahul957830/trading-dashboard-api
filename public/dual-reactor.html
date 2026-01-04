@@ -46,12 +46,6 @@ async function fetchData() {
 fetchData();
 setInterval(fetchData, 10000);
 
-/* ================= SHARED PHASES ================= */
-let glowPhase = 0;
-let waveOffset = 0;
-let heatPhase = 0;
-
-/* ================= HELPERS ================= */
 const clamp = v => Math.max(0, Math.min(1, v));
 
 function resolveState(d) {
@@ -61,15 +55,23 @@ function resolveState(d) {
   return "HEALTHY";
 }
 
-/* ================= REACTOR ================= */
+/* ================= REACTOR (MONTHLY CANONICAL) ================= */
 function Reactor(canvas) {
   const ctx = canvas.getContext("2d");
   const C = { x: canvas.width / 2, y: canvas.height / 2 };
   const R = 64;
   const IR = 50;
 
-  const baseColor = "rgba(90,200,150,0.95)";
-  const warningColor = "rgba(140,90,90,0.95)";
+  /* monthly-grade aesthetic */
+  const BASE_COLOR    = "rgba(90,200,150,0.95)";
+  const WARNING_COLOR = "rgba(160,80,60,0.9)";
+  const NEUTRAL_COLOR = "rgba(170,170,170,0.85)";
+  const SPEED         = 0.9; // slower, heavier
+
+  let wave = 0;
+  let pulse = 0;
+  let coreBreath = 0;
+  let heatDistort = 0;
 
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -77,26 +79,30 @@ function Reactor(canvas) {
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* -------- INNER CORE -------- */
-    const innerGlow = 18 + Math.sin(glowPhase) * 14;
+    /* -------- INNER CORE DEPTH -------- */
+    coreBreath += 0.012 * SPEED;
+    const innerGlow = 14 + Math.sin(coreBreath) * 6;
 
     const coreGrad = ctx.createRadialGradient(
-      C.x, C.y, 10,
+      C.x, C.y, 6,
       C.x, C.y, IR
     );
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.12)");
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.14)");
+    coreGrad.addColorStop(0.4, "rgba(255,255,255,0.05)");
     coreGrad.addColorStop(1, "rgba(0,0,0,0.55)");
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR, 0, Math.PI * 2);
     ctx.fillStyle = coreGrad;
-    ctx.shadowColor = baseColor;
+    ctx.shadowColor = BASE_COLOR;
     ctx.shadowBlur = innerGlow;
     ctx.fill();
     ctx.restore();
 
-    /* -------- HEAT DISTORTION -------- */
+    /* -------- HEAT DISTORTION (CALM) -------- */
+    heatDistort += 0.002 * SPEED;
+
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
@@ -104,27 +110,26 @@ function Reactor(canvas) {
 
     for (let i = 0; i < 3; i++) {
       const radius = IR * (0.4 + i * 0.18);
-      const alpha = 0.025 + i * 0.01;
+      const alpha = 0.012 + i * 0.01;
       const wobble =
-        Math.sin(heatPhase + i * 1.3) * 1.6 +
-        Math.sin(heatPhase * 0.6 + i) * 1.2;
+        Math.sin(heatDistort + i * 1.6) * 1.1 +
+        Math.sin(heatDistort * 0.6 + i) * 0.7;
 
       ctx.beginPath();
       ctx.arc(C.x + wobble, C.y, radius, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.1;
       ctx.stroke();
     }
     ctx.restore();
 
     /* -------- RING -------- */
-    const breathing = 38 + Math.sin(glowPhase) * 22;
+    pulse += 0.025 * SPEED;
+    const breathing = 18 + Math.sin(pulse) * 7;
 
-    let ringColor = baseColor;
-    if (state === "WARNING") ringColor = warningColor;
-    if (state === "IDLE" || state === "BREAKEVEN") {
-      ringColor = "rgba(170,170,170,0.95)";
-    }
+    let ringColor = BASE_COLOR;
+    if (state === "WARNING") ringColor = WARNING_COLOR;
+    if (state === "IDLE" || state === "BREAKEVEN") ringColor = NEUTRAL_COLOR;
 
     ctx.save();
     ctx.beginPath();
@@ -133,11 +138,30 @@ function Reactor(canvas) {
     ctx.lineWidth = 7.5;
     ctx.shadowColor = ringColor;
     ctx.shadowBlur = breathing;
+    ctx.globalAlpha = 0.95;
     ctx.stroke();
     ctx.restore();
 
-    /* -------- FUEL -------- */
+    // inner boundary reflection
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.07)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    /* -------- SURFACE TEXTURE -------- */
+    const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
+    tex.addColorStop(0, "rgba(255,255,255,0.03)");
+    tex.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = tex;
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* -------- FUEL (HEAVY / MONTHLY STYLE) -------- */
     if (state === "HEALTHY" && progress > 0) {
+      wave += 0.018 * SPEED;
+
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
       const topY = baseY - h;
@@ -149,8 +173,8 @@ function Reactor(canvas) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.06 + waveOffset) * 2.0;
-        const w2 = Math.sin(x * 0.10 + waveOffset * 1.2) * 1.4;
+        const w1 = Math.sin(x * 0.06 + wave) * 2.1;
+        const w2 = Math.sin(x * 0.11 + wave * 1.3) * 1.4;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -158,12 +182,12 @@ function Reactor(canvas) {
       ctx.closePath();
 
       const fuelGrad = ctx.createLinearGradient(0, topY, 0, baseY);
-      fuelGrad.addColorStop(0, "rgba(210,255,240,0.95)");
-      fuelGrad.addColorStop(1, baseColor);
+      fuelGrad.addColorStop(0, "rgba(220,255,240,0.95)");
+      fuelGrad.addColorStop(1, BASE_COLOR);
 
       ctx.fillStyle = fuelGrad;
-      ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = BASE_COLOR;
+      ctx.shadowBlur = 12;
       ctx.fill();
       ctx.restore();
     }
@@ -171,7 +195,7 @@ function Reactor(canvas) {
 }
 
 /* ================= INIT ================= */
-const weekly = Reactor(document.getElementById("weekly"));
+const weekly  = Reactor(document.getElementById("weekly"));
 const monthly = Reactor(document.getElementById("monthly"));
 
 /* ================= LOOP ================= */
@@ -180,11 +204,6 @@ function loop() {
     weekly(data.weekly);
     monthly(data.monthly);
   }
-
-  glowPhase += 0.02;
-  waveOffset += 0.10;
-  heatPhase += 0.025;
-
   requestAnimationFrame(loop);
 }
 loop();
