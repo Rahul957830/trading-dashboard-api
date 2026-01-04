@@ -67,7 +67,7 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
-  /* ---- BURST BUBBLES (CLEAN) ---- */
+  /* ---- BURST BUBBLES (SAFE) ---- */
   const bursts = [];
   let lastBurst = performance.now();
 
@@ -110,7 +110,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- NOISE SHIMMER (CORE) -------- */
+    /* -------- NOISE SHIMMER -------- */
     shimmerSeed += 0.015;
     ctx.save();
     ctx.beginPath();
@@ -152,7 +152,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    /* -------- RING SHIMMER (VISIBLE, NON-SNAKE) -------- */
+    /* -------- RING SHIMMER -------- */
     if (state === "HEALTHY" && Math.random() < 0.45) {
       const angle = Math.random() * Math.PI * 2;
       ctx.beginPath();
@@ -167,13 +167,6 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.lineWidth = 1.6;
       ctx.stroke();
     }
-
-    /* -------- INNER RING REFLECTION -------- */
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
     /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
@@ -208,7 +201,7 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.fill();
       ctx.restore();
 
-      /* ---- BURST BUBBLES (NO SPARKLE) ---- */
+      /* ---- BURST BUBBLES (NO SPARKLE, NO CRASH) ---- */
       const now = performance.now();
       if (now - lastBurst > 6000 + Math.random() * 6000) {
         lastBurst = now;
@@ -220,15 +213,17 @@ function Reactor(canvas, baseColor, warningColor) {
         b.y -= b.vy;
         b.life -= 0.018;
 
+        if (b.life <= 0) {
+          bursts.splice(i, 1);
+          continue;
+        }
+
+        const radius = Math.max(0.3, b.r * b.life);
         ctx.globalAlpha = Math.max(0, b.life * 0.5);
         ctx.beginPath();
-        ctx.arc(C.x + b.x, b.y, b.r * b.life, 0, Math.PI * 2);
+        ctx.arc(C.x + b.x, b.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(200,255,240,1)";
         ctx.fill();
-
-        if (b.life <= 0 || b.y < C.y - IR - 24) {
-          bursts.splice(i, 1);
-        }
       }
       ctx.globalAlpha = 1;
     }
