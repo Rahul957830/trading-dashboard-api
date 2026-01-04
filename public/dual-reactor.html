@@ -114,6 +114,7 @@ function Reactor(canvas, baseColor, warningColor) {
         1.2
       );
     }
+
     ctx.restore();
 
     /* -------- RING -------- */
@@ -164,7 +165,7 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.arc(C.x, C.y, IR, 0, Math.PI * 2);
       ctx.clip();
 
-      // Fuel body
+      /* surface */
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
         const w1 = Math.sin(x * 0.08 + wave) * 3.2;
@@ -184,17 +185,14 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.shadowBlur = 16;
       ctx.fill();
 
-      /* ===== NEW: FUEL SURFACE FOG ===== */
-      const fogGrad = ctx.createLinearGradient(0, topY - 12, 0, topY + 18);
+      /* --- SURFACE FOG (THIN & ATTACHED) --- */
+      const fogGrad = ctx.createLinearGradient(0, topY - 4, 0, topY + 6);
       fogGrad.addColorStop(0, "rgba(210,255,240,0)");
-      fogGrad.addColorStop(0.4, "rgba(210,255,240,0.18)");
+      fogGrad.addColorStop(0.45, "rgba(210,255,240,0.12)");
       fogGrad.addColorStop(1, "rgba(210,255,240,0)");
 
       ctx.fillStyle = fogGrad;
-      ctx.beginPath();
-      ctx.arc(C.x, C.y, IR, 0, Math.PI * 2);
       ctx.fill();
-      /* ===== END NEW ===== */
 
       ctx.restore();
     }
