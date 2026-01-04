@@ -74,10 +74,10 @@ function Reactor(canvas, baseColor, warningColor) {
   function spawnBurst(surfaceY) {
     for (let i = 0; i < 4 + Math.floor(Math.random() * 2); i++) {
       bursts.push({
-        x: (Math.random() * 2 - 1) * IR * 0.4,
+        x: (Math.random() * 2 - 1) * IR * 0.35,
         y: surfaceY,
-        r: 1.6 + Math.random() * 0.6,
-        vy: 0.35 + Math.random() * 0.2,
+        r: 1.5 + Math.random() * 0.5,
+        vy: 0.32 + Math.random() * 0.18,
         life: 1
       });
     }
@@ -130,7 +130,7 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- GLASS TUBE RING -------- */
+    /* -------- RING -------- */
     pulse += 0.115;
     const breathing = 30 + Math.sin(pulse) * 16;
 
@@ -209,17 +209,17 @@ function Reactor(canvas, baseColor, warningColor) {
       for (let i = bursts.length - 1; i >= 0; i--) {
         const b = bursts[i];
         b.y -= b.vy;
-        b.life -= 0.015;
+        b.life -= 0.02;
 
         ctx.globalAlpha = b.life;
         ctx.beginPath();
         ctx.arc(C.x + b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fillStyle = baseColor;
-        ctx.shadowColor = baseColor;
-        ctx.shadowBlur = 6;
+
+        // muted, elegant bubble color (no glow)
+        ctx.fillStyle = "rgba(200,210,205,0.8)";
         ctx.fill();
 
-        if (b.life <= 0 || b.y < surfaceY - 24) {
+        if (b.life <= 0 || b.y < surfaceY - 26) {
           bursts.splice(i, 1);
         }
       }
