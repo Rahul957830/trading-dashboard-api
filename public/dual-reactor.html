@@ -73,15 +73,15 @@ function Reactor(canvas, baseColor, warningColor) {
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* -------- INNER CORE (AMPLITUDE ↑ ONLY) -------- */
-    coreBreath += 0.035;
-    const innerGlow = 20 + Math.sin(coreBreath) * 14;
+    /* -------- INNER CORE (ALWAYS BREATHING) -------- */
+    coreBreath += 0.06;
+    const innerGlow = 14 + Math.sin(coreBreath) * 10;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
       C.x, C.y, IR
     );
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.14)");
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.12)");
     coreGrad.addColorStop(1, "rgba(0,0,0,0.55)");
 
     ctx.save();
@@ -93,8 +93,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- HEAT DISTORTION (UNCHANGED SPEED) -------- */
-    heatDistort += 0.01;
+    /* -------- HEAT DISTORTION (NOTICEABLE ALWAYS) -------- */
+    heatDistort += 0.02;
 
     ctx.save();
     ctx.beginPath();
@@ -105,8 +105,8 @@ function Reactor(canvas, baseColor, warningColor) {
       const radius = IR * (0.35 + i * 0.15);
       const alpha = 0.03 + i * 0.015;
       const wobble =
-        Math.sin(heatDistort + i * 1.3) * 2.2 +
-        Math.sin(heatDistort * 0.6 + i) * 1.8;
+        Math.sin(heatDistort + i * 1.3) * 2.5 +
+        Math.sin(heatDistort * 0.6 + i) * 2;
 
       ctx.beginPath();
       ctx.arc(C.x + wobble, C.y, radius, 0, Math.PI * 2);
@@ -116,9 +116,9 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- RING (AMPLITUDE ↑ ONLY) -------- */
-    pulse += 0.03;
-    const breathing = 38 + Math.sin(pulse) * 16;
+    /* -------- RING -------- */
+    pulse += 0.1;
+    const breathing = 30 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -136,24 +136,25 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
+    // inner reflective boundary
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    /* -------- TEXTURE -------- */
+    /* -------- TEXTURE (STRONGER) -------- */
     const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
-    tex.addColorStop(0, "rgba(255,255,255,0.06)");
+    tex.addColorStop(0, "rgba(255,255,255,0.05)");
     tex.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = tex;
     ctx.beginPath();
     ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
     ctx.fill();
 
-    /* -------- FUEL (AMPLITUDE ↑ ONLY) -------- */
+    /* -------- FUEL (HEALTHY ONLY) -------- */
     if (state === "HEALTHY" && progress > 0) {
-      wave += 0.03;
+      wave += 0.055;
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
@@ -166,8 +167,8 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.08 + wave) * 2.6;
-        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2.0;
+        const w1 = Math.sin(x * 0.08 + wave) * 3.2;
+        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2.4;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -180,14 +181,14 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 24;
+      ctx.shadowBlur = 16;
       ctx.fill();
       ctx.restore();
     }
   };
 }
 
-/* ================= INIT ================= */
+/* ================= INIT (IDENTICAL REACTORS) ================= */
 const weekly = Reactor(
   document.getElementById("weekly"),
   "rgba(90,200,150,0.95)",
