@@ -67,18 +67,17 @@ function Reactor(canvas, baseColor, warningColor) {
 
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
-
     const t = performance.now() * 0.001;
 
-    /* -------- INNER CORE (CLEAR BREATH) -------- */
+    /* -------- INNER CORE (CLEAR & STRONG BREATH) -------- */
     const innerGlow =
-      22 + Math.sin(t * 2.2) * 18;
+      28 + Math.sin(t * 2.4) * 24;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
       C.x, C.y, IR
     );
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.16)");
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.18)");
     coreGrad.addColorStop(1, "rgba(0,0,0,0.55)");
 
     ctx.save();
@@ -90,7 +89,7 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- HEAT DISTORTION (UNCHANGED) -------- */
+    /* -------- HEAT DISTORTION -------- */
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, IR - 2, 0, Math.PI * 2);
@@ -111,9 +110,9 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- RING (STRONGER, READABLE BREATH) -------- */
+    /* -------- RING (VERY READABLE PULSE) -------- */
     const breathing =
-      44 + Math.sin(t * 1.9) * 22;
+      56 + Math.sin(t * 2.1) * 30;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -139,7 +138,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* -------- TEXTURE -------- */
     const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
-    tex.addColorStop(0, "rgba(255,255,255,0.07)");
+    tex.addColorStop(0, "rgba(255,255,255,0.08)");
     tex.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = tex;
     ctx.beginPath();
@@ -170,12 +169,12 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.closePath();
 
       const fuelGrad = ctx.createLinearGradient(0, topY, 0, baseY);
-      fuelGrad.addColorStop(0, "rgba(210,255,240,0.96)");
+      fuelGrad.addColorStop(0, "rgba(210,255,240,0.97)");
       fuelGrad.addColorStop(1, baseColor);
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 28;
+      ctx.shadowBlur = 36;
       ctx.fill();
       ctx.restore();
     }
