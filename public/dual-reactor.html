@@ -67,6 +67,21 @@ function Reactor(canvas, baseColor, warningColor) {
   let coreBreath = 0;
   let shimmerSeed = Math.random() * 1000;
 
+  const burstBubbles = [];
+  let lastBurst = 0;
+
+  function spawnBurst(surfaceY) {
+    for (let i = 0; i < 5; i++) {
+      burstBubbles.push({
+        x: (Math.random() * 2 - 1) * IR * 0.25,
+        y: surfaceY,
+        r: 1.6 + Math.random() * 0.6,
+        vy: 0.4 + Math.random() * 0.25,
+        life: 1
+      });
+    }
+  }
+
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -114,7 +129,6 @@ function Reactor(canvas, baseColor, warningColor) {
         1.2
       );
     }
-
     ctx.restore();
 
     /* -------- RING -------- */
@@ -165,7 +179,6 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.arc(C.x, C.y, IR, 0, Math.PI * 2);
       ctx.clip();
 
-      /* surface */
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
         const w1 = Math.sin(x * 0.08 + wave) * 3.2;
@@ -185,16 +198,41 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.shadowBlur = 16;
       ctx.fill();
 
-      /* --- SURFACE FOG (THIN & ATTACHED) --- */
+      /* ---- SURFACE FOG ---- */
       const fogGrad = ctx.createLinearGradient(0, topY - 4, 0, topY + 6);
       fogGrad.addColorStop(0, "rgba(210,255,240,0)");
       fogGrad.addColorStop(0.45, "rgba(210,255,240,0.12)");
       fogGrad.addColorStop(1, "rgba(210,255,240,0)");
-
       ctx.fillStyle = fogGrad;
       ctx.fill();
 
       ctx.restore();
+
+      /* ---- BURST BUBBLES (AIR ONLY) ---- */
+      const now = performance.now();
+      if (now - lastBurst > 9000) {
+        lastBurst = now;
+        spawnBurst(topY);
+      }
+    }
+
+    /* -------- DRAW BURST BUBBLES -------- */
+    for (let i = burstBubbles.length - 1; i >= 0; i--) {
+      const b = burstBubbles[i];
+      b.y -= b.vy;
+      b.life -= 0.02;
+
+      if (b.life <= 0) {
+        burstBubbles.splice(i, 1);
+        continue;
+      }
+
+      ctx.globalAlpha = b.life * 0.35;
+      ctx.beginPath();
+      ctx.arc(C.x + b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(200,255,240,1)";
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
   };
 }
