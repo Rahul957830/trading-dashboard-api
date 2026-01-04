@@ -46,6 +46,13 @@ async function fetchData() {
 fetchData();
 setInterval(fetchData, 10000);
 
+/* ================= SHARED PHASES (CRITICAL FIX) ================= */
+let glowPhase = 0;
+let waveOffset = 0;
+let heatPhase = 0;
+let boilPhase = 0;
+
+/* ================= HELPERS ================= */
 const clamp = v => Math.max(0, Math.min(1, v));
 
 function resolveState(d) {
@@ -56,28 +63,29 @@ function resolveState(d) {
 }
 
 /* ================= REACTOR ================= */
-function Reactor(canvas, baseColor, warningColor) {
+function Reactor(canvas) {
   const ctx = canvas.getContext("2d");
   const C = { x: canvas.width / 2, y: canvas.height / 2 };
   const R = 64;
   const IR = 50;
+
+  const baseColor = "rgba(90,200,150,0.95)";
+  const warningColor = "rgba(140,90,90,0.95)";
 
   return function render(stats) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
-    const t = performance.now() * 0.001;
 
-    /* -------- INNER CORE (CLEAR & STRONG BREATH) -------- */
-    const innerGlow =
-      28 + Math.sin(t * 2.4) * 24;
+    /* -------- INNER CORE -------- */
+    const innerGlow = 14 + Math.sin(glowPhase) * 10;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
       C.x, C.y, IR
     );
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.18)");
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.12)");
     coreGrad.addColorStop(1, "rgba(0,0,0,0.55)");
 
     ctx.save();
@@ -99,8 +107,8 @@ function Reactor(canvas, baseColor, warningColor) {
       const radius = IR * (0.35 + i * 0.15);
       const alpha = 0.03 + i * 0.015;
       const wobble =
-        Math.sin(t * 0.8 + i * 1.3) * 2.2 +
-        Math.sin(t * 0.5 + i) * 1.8;
+        Math.sin(heatPhase + i * 1.3) * 2.5 +
+        Math.sin(heatPhase * 0.6 + i) * 2;
 
       ctx.beginPath();
       ctx.arc(C.x + wobble, C.y, radius, 0, Math.PI * 2);
@@ -110,9 +118,8 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- RING (VERY READABLE PULSE) -------- */
-    const breathing =
-      56 + Math.sin(t * 2.1) * 30;
+    /* -------- RING -------- */
+    const breathing = 30 + Math.sin(glowPhase) * 16;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -130,25 +137,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    /* -------- TEXTURE -------- */
-    const tex = ctx.createRadialGradient(C.x, C.y, 0, C.x, C.y, R);
-    tex.addColorStop(0, "rgba(255,255,255,0.08)");
-    tex.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = tex;
-    ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
-    ctx.fill();
-
     /* -------- FUEL -------- */
     if (state === "HEALTHY" && progress > 0) {
-      const wavePhase = t * 1.1;
-
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
       const topY = baseY - h;
@@ -160,8 +150,8 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.08 + wavePhase) * 2.8;
-        const w2 = Math.sin(x * 0.14 + wavePhase * 1.4) * 2.2;
+        const w1 = Math.sin(x * 0.08 + waveOffset) * 3.2;
+        const w2 = Math.sin(x * 0.14 + waveOffset * 1.6) * 2.4;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -169,12 +159,12 @@ function Reactor(canvas, baseColor, warningColor) {
       ctx.closePath();
 
       const fuelGrad = ctx.createLinearGradient(0, topY, 0, baseY);
-      fuelGrad.addColorStop(0, "rgba(210,255,240,0.97)");
+      fuelGrad.addColorStop(0, "rgba(210,255,240,0.95)");
       fuelGrad.addColorStop(1, baseColor);
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 36;
+      ctx.shadowBlur = 16;
       ctx.fill();
       ctx.restore();
     }
@@ -182,17 +172,8 @@ function Reactor(canvas, baseColor, warningColor) {
 }
 
 /* ================= INIT ================= */
-const weekly = Reactor(
-  document.getElementById("weekly"),
-  "rgba(90,200,150,0.95)",
-  "rgba(140,90,90,0.95)"
-);
-
-const monthly = Reactor(
-  document.getElementById("monthly"),
-  "rgba(90,200,150,0.95)",
-  "rgba(140,90,90,0.95)"
-);
+const weekly = Reactor(document.getElementById("weekly"));
+const monthly = Reactor(document.getElementById("monthly"));
 
 /* ================= LOOP ================= */
 function loop() {
@@ -200,6 +181,13 @@ function loop() {
     weekly(data.weekly);
     monthly(data.monthly);
   }
+
+  /* EXACT SAME SPEEDS AS SINGLE REACTOR */
+  glowPhase += 0.02;
+  waveOffset += 0.35;
+  heatPhase += 0.04;
+  boilPhase += 0.01;
+
   requestAnimationFrame(loop);
 }
 loop();
