@@ -75,13 +75,13 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* -------- INNER CORE -------- */
     coreBreath += 0.07;
-    const innerGlow = 18; // ↑ constant density (NO animation change)
+    const innerGlow = 20; // denser, static
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
       C.x, C.y, IR
     );
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.12)");
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.14)");
     coreGrad.addColorStop(1, "rgba(0,0,0,0.55)");
 
     ctx.save();
@@ -117,8 +117,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.restore();
 
     /* -------- RING -------- */
-    pulse += 0.115; // 🔒 UNCHANGED
-    const breathing = 30 + Math.sin(pulse) * 16; // 🔒 UNCHANGED
+    pulse += 0.115; // 🔒 unchanged
+    const breathing = 30 + Math.sin(pulse) * 16; // 🔒 unchanged
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -126,34 +126,38 @@ function Reactor(canvas, baseColor, warningColor) {
       ringColor = "rgba(170,170,170,0.95)";
     }
 
-    // main ring
+    /* ---- MAIN RING (animated glow) ---- */
     ctx.save();
     ctx.beginPath();
     ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
     ctx.strokeStyle = ringColor;
     ctx.lineWidth = 8;
     ctx.shadowColor = ringColor;
-    ctx.shadowBlur = breathing + 12; // ↑ density ONLY
+    ctx.shadowBlur = breathing + 14; // denser glow
     ctx.stroke();
     ctx.restore();
 
-    // static outer halo (NO animation)
+    /* ---- STATIC OUTER HALO (power) ---- */
     ctx.save();
     ctx.beginPath();
-    ctx.arc(C.x, C.y, R + 1.5, 0, Math.PI * 2);
-    ctx.strokeStyle = ringColor.replace("0.95", "0.3");
-    ctx.lineWidth = 4;
+    ctx.arc(C.x, C.y, R + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor.replace("0.95", "0.35");
+    ctx.lineWidth = 5;
     ctx.shadowColor = ringColor;
-    ctx.shadowBlur = 20; // constant
+    ctx.shadowBlur = 26; // strong, constant
     ctx.stroke();
     ctx.restore();
 
-    // inner reflective boundary
+    /* ---- INNER HALO (edge energy) ---- */
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(C.x, C.y, R - 4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.arc(C.x, C.y, R - 2.5, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = 2;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur = 10;
     ctx.stroke();
+    ctx.restore();
 
     /* -------- FUEL (UNCHANGED) -------- */
     if (state === "HEALTHY" && progress > 0) {
