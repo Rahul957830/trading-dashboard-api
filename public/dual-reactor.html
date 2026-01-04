@@ -73,9 +73,9 @@ function Reactor(canvas, baseColor, warningColor) {
     const state = resolveState(stats);
     const progress = clamp(stats.progress || 0);
 
-    /* -------- INNER CORE -------- */
-    coreBreath += 0.06; // ✅ restored
-    const innerGlow = 18 + Math.sin(coreBreath) * 12; // glow ↑ only
+    /* -------- INNER CORE (SLOW BREATH) -------- */
+    coreBreath += 0.035;
+    const innerGlow = 18 + Math.sin(coreBreath) * 12;
 
     const coreGrad = ctx.createRadialGradient(
       C.x, C.y, 10,
@@ -93,8 +93,8 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.fill();
     ctx.restore();
 
-    /* -------- HEAT DISTORTION -------- */
-    heatDistort += 0.02; // ✅ restored
+    /* -------- HEAT DISTORTION (VERY SLOW) -------- */
+    heatDistort += 0.01;
 
     ctx.save();
     ctx.beginPath();
@@ -105,8 +105,8 @@ function Reactor(canvas, baseColor, warningColor) {
       const radius = IR * (0.35 + i * 0.15);
       const alpha = 0.03 + i * 0.015;
       const wobble =
-        Math.sin(heatDistort + i * 1.3) * 2.5 +
-        Math.sin(heatDistort * 0.6 + i) * 2;
+        Math.sin(heatDistort + i * 1.3) * 2.2 +
+        Math.sin(heatDistort * 0.6 + i) * 1.8;
 
       ctx.beginPath();
       ctx.arc(C.x + wobble, C.y, radius, 0, Math.PI * 2);
@@ -116,9 +116,9 @@ function Reactor(canvas, baseColor, warningColor) {
     }
     ctx.restore();
 
-    /* -------- RING -------- */
-    pulse += 0.1; // ✅ restored
-    const breathing = 34 + Math.sin(pulse) * 18; // glow ↑ only
+    /* -------- RING (CALM BREATH) -------- */
+    pulse += 0.03;
+    const breathing = 34 + Math.sin(pulse) * 14;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -151,9 +151,9 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.arc(C.x, C.y, R - 3, 0, Math.PI * 2);
     ctx.fill();
 
-    /* -------- FUEL -------- */
+    /* -------- FUEL (SLOW SURFACE) -------- */
     if (state === "HEALTHY" && progress > 0) {
-      wave += 0.055; // ✅ restored
+      wave += 0.03;
 
       const h = IR * 2 * progress;
       const baseY = C.y + IR;
@@ -166,8 +166,8 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.beginPath();
       for (let x = -IR; x <= IR; x++) {
-        const w1 = Math.sin(x * 0.08 + wave) * 3.2;
-        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 2.4;
+        const w1 = Math.sin(x * 0.08 + wave) * 2.4;
+        const w2 = Math.sin(x * 0.14 + wave * 1.6) * 1.8;
         ctx.lineTo(C.x + x, topY + w1 + w2);
       }
       ctx.lineTo(C.x + IR, baseY);
@@ -180,7 +180,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
       ctx.fillStyle = fuelGrad;
       ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 20; // glow ↑ only
+      ctx.shadowBlur = 20;
       ctx.fill();
       ctx.restore();
     }
