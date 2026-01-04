@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Dual Reactor Core</title>
+<title>Dual Reactor Control</title>
 
 <style>
 html, body {
@@ -11,255 +11,158 @@ html, body {
   background: transparent;
   overflow: hidden;
 }
-
 .container {
   width: 520px;
   height: 220px;
   display: flex;
-  justify-content: space-evenly;
+  gap: 24px;
   align-items: center;
+  justify-content: center;
 }
-
-canvas {
-  background: transparent;
-}
+canvas { background: transparent; }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-  <canvas id="weekly" width="260" height="220"></canvas>
-  <canvas id="monthly" width="260" height="220"></canvas>
+  <canvas id="weekly" width="240" height="220"></canvas>
+  <canvas id="monthly" width="240" height="220"></canvas>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
+const API = "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
+const canvases = {
+  weekly: document.getElementById("weekly"),
+  monthly: document.getElementById("monthly")
+};
 
-const API_URL =
-  "https://trading-dashboard-api-five.vercel.app/api/engine-ui";
-
-const RADIUS = 66;
-const INNER_RADIUS = 52;
-
-/* ================= STATE ================= */
-
-let weeklyData = null;
-let monthlyData = null;
-
-/* ================= FETCH (STATE ONLY) ================= */
+let data = null;
+let lastFetch = 0;
 
 async function fetchData() {
   try {
-    const res = await fetch(API_URL + "?t=" + Date.now(), { cache: "no-store" });
-    const json = await res.json();
-    weeklyData = json.weekly;
-    monthlyData = json.monthly;
+    const r = await fetch(API + "?t=" + Date.now(), { cache: "no-store" });
+    data = await r.json();
   } catch {}
 }
-
 fetchData();
 setInterval(fetchData, 10000);
 
 /* ================= HELPERS ================= */
 
-function clamp(v) {
-  return Math.max(0, Math.min(1, v));
-}
+function clamp(v) { return Math.max(0, Math.min(1, v)); }
 
-function getState(d) {
-  if (!d || !d.hasTrades) return "IDLE";
+function resolveState(d) {
+  if (!d.hasTrades) return "IDLE";
   if (d.pl < 0) return "WARNING";
   if (d.pl === 0) return "BREAKEVEN";
   return "HEALTHY";
 }
 
-function getProgress(d) {
-  if (!d || !d.hasTrades || !d.target || d.target <= 0) return 0;
-  return clamp(d.pl / d.target);
-}
+/* ================= REACTOR ================= */
 
-/* ================= PALETTE & TUNING ================= */
-
-function palette(state, tone) {
-  const weekly = "rgba(120,255,200,1)";
-  const monthly = "rgba(90,220,170,1)";
-  const base = tone === "weekly" ? weekly : monthly;
-
-  switch (state) {
-    case "HEALTHY":
-      return {
-        ring: base,
-        glow: base,
-        fuel: base,
-        breathingBase: 28,
-        breathingAmp: 8,
-        textureAlpha: 0.045
-      };
-
-    case "BREAKEVEN":
-      return {
-        ring: base,
-        glow: base,
-        fuel: null,
-        breathingBase: 24,
-        breathingAmp: 6,
-        textureAlpha: 0.035
-      };
-
-    case "WARNING":
-      return {
-        ring: "rgba(255,165,90,1)",        // muted amber
-        glow: "rgba(255,165,90,0.35)",
-        fuel: null,
-        breathingBase: 16,
-        breathingAmp: 4,
-        textureAlpha: 0.06
-      };
-
-    default: // IDLE
-      return {
-        ring: "rgba(170,170,170,1)",
-        glow: "rgba(170,170,170,0.4)",
-        fuel: null,
-        breathingBase: 14,
-        breathingAmp: 2,
-        textureAlpha: 0
-      };
-  }
-}
-
-/* ================= DRAW HELPERS ================= */
-
-function drawInnerDepth(ctx, C) {
-  const g = ctx.createRadialGradient(
-    C.x, C.y, INNER_RADIUS * 0.3,
-    C.x, C.y, INNER_RADIUS
-  );
-  g.addColorStop(0, "rgba(255,255,255,0.05)");
-  g.addColorStop(1, "rgba(0,0,0,0.35)");
-
-  ctx.beginPath();
-  ctx.arc(C.x, C.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = g;
-  ctx.fill();
-}
-
-function drawTexture(ctx, C, alpha) {
-  if (alpha <= 0) return;
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.beginPath();
-  ctx.arc(C.x, C.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.clip();
-
-  ctx.fillStyle = "white";
-
-  for (let i = 0; i < 90; i++) {
-    const x = C.x + (Math.random() * 2 - 1) * INNER_RADIUS;
-    const y = C.y + (Math.random() * 2 - 1) * INNER_RADIUS;
-    const r = Math.random() * 0.6;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawRing(ctx, C, colors, time) {
-  const breathing =
-    colors.breathingBase +
-    Math.sin(time) * colors.breathingAmp;
-
-  ctx.beginPath();
-  ctx.arc(C.x, C.y, RADIUS, 0, Math.PI * 2);
-  ctx.strokeStyle = colors.ring;
-  ctx.lineWidth = 8;
-  ctx.shadowColor = colors.glow;
-  ctx.shadowBlur = breathing;
-  ctx.stroke();
-}
-
-function drawFuel(ctx, C, level, color, speed, time) {
-  if (level <= 0) return;
-
-  const baseY = C.y + INNER_RADIUS;
-  const h = INNER_RADIUS * 2 * level;
-  const surface = baseY - h;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(C.x, C.y, INNER_RADIUS, 0, Math.PI * 2);
-  ctx.clip();
-
-  ctx.beginPath();
-  ctx.moveTo(C.x - INNER_RADIUS, surface);
-  for (let x = -INNER_RADIUS; x <= INNER_RADIUS; x++) {
-    const wave =
-      Math.sin(x * 0.05 + time * speed) * 3;
-    ctx.lineTo(C.x + x, surface + wave);
-  }
-  ctx.lineTo(C.x + INNER_RADIUS, baseY);
-  ctx.lineTo(C.x - INNER_RADIUS, baseY);
-  ctx.closePath();
-
-  const grad = ctx.createLinearGradient(0, surface, 0, baseY);
-  grad.addColorStop(0, "rgba(200,255,235,0.95)");
-  grad.addColorStop(1, color);
-
-  ctx.fillStyle = grad;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
-  ctx.fill();
-
-  ctx.restore();
-}
-
-/* ================= MAIN LOOP (ONE ONLY) ================= */
-
-function renderReactor(canvas, block, tone, speed) {
+function Reactor(canvas, baseColor, warningColor, speedFactor) {
   const ctx = canvas.getContext("2d");
-  const C = { x: canvas.width / 2, y: canvas.height / 2 };
-  const state = getState(block);
-  const colors = palette(state, tone);
-  const time = performance.now() * 0.001;
+  const C = { x: canvas.width/2, y: canvas.height/2 };
+  const R = 64;
+  const IR = 50;
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  let glow = 0;
+  let wave = 0;
+  let innerPulse = 0;
 
-  drawInnerDepth(ctx, C);
+  return function render(stats) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  if (state === "HEALTHY") {
-    drawFuel(ctx, C, getProgress(block), colors.fuel, speed, time);
+    const state = resolveState(stats);
+    const progress = clamp(stats.progress || 0);
+
+    // INNER CORE (always breathing)
+    innerPulse += 0.02;
+    const coreGlow = 8 + Math.sin(innerPulse) * 4;
+    const g = ctx.createRadialGradient(C.x, C.y, 10, C.x, C.y, IR);
+    g.addColorStop(0, "rgba(255,255,255,0.08)");
+    g.addColorStop(1, "rgba(0,0,0,0.4)");
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.shadowColor = baseColor;
+    ctx.shadowBlur = coreGlow;
+    ctx.fill();
+
+    // RING
+    glow += state === "HEALTHY" ? 0.05*speedFactor : 0.02;
+    ctx.beginPath();
+    ctx.arc(C.x, C.y, R, 0, Math.PI*2);
+    ctx.lineWidth = 8;
+
+    let ringColor = baseColor;
+    if (state === "WARNING") ringColor = warningColor;
+    if (state === "IDLE") ringColor = "rgba(170,170,170,0.9)";
+
+    ctx.strokeStyle = ringColor;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur = state === "HEALTHY" ? 28 : 12;
+    ctx.stroke();
+
+    // FUEL
+    if (state === "HEALTHY" && progress > 0) {
+      wave += 0.04 * speedFactor;
+      const h = IR*2*progress;
+      const baseY = C.y + IR;
+      const topY = baseY - h;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(C.x, C.y, IR, 0, Math.PI*2);
+      ctx.clip();
+
+      ctx.beginPath();
+      for (let x=-IR;x<=IR;x++) {
+        const w1 = Math.sin(x*0.06 + wave)*3;
+        const w2 = Math.sin(x*0.12 + wave*1.7)*2;
+        ctx.lineTo(C.x+x, topY + w1 + w2);
+      }
+      ctx.lineTo(C.x+IR, baseY);
+      ctx.lineTo(C.x-IR, baseY);
+      ctx.closePath();
+
+      const fg = ctx.createLinearGradient(0,topY,0,baseY);
+      fg.addColorStop(0,"rgba(220,255,245,0.95)");
+      fg.addColorStop(1,baseColor);
+      ctx.fillStyle = fg;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = baseColor;
+      ctx.fill();
+      ctx.restore();
+    }
   }
-
-  drawTexture(ctx, C, colors.textureAlpha);
-  drawRing(ctx, C, colors, time);
 }
+
+/* ================= INIT ================= */
+
+const weeklyReactor = Reactor(
+  canvases.weekly,
+  "rgba(120,255,220,0.9)",
+  "rgba(160,60,60,0.9)",
+  1.2
+);
+
+const monthlyReactor = Reactor(
+  canvases.monthly,
+  "rgba(90,200,150,0.9)",
+  "rgba(160,60,60,0.9)",
+  0.7
+);
 
 function loop() {
-  if (weeklyData) {
-    renderReactor(
-      document.getElementById("weekly"),
-      weeklyData,
-      "weekly",
-      1.6
-    );
-  }
-  if (monthlyData) {
-    renderReactor(
-      document.getElementById("monthly"),
-      monthlyData,
-      "monthly",
-      0.8
-    );
+  if (data) {
+    weeklyReactor(data.weekly);
+    monthlyReactor(data.monthly);
   }
   requestAnimationFrame(loop);
 }
-
-loop(); // 🔒 single render loop
+loop();
 </script>
-
 </body>
 </html>
