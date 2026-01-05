@@ -2,132 +2,124 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Stable)</title>
+<title>Premium Fire Strip</title>
 
 <style>
-body {
-  margin: 0;
-  background: transparent;
-  overflow: hidden;
-}
+  body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+  }
 
-.fire-strip {
-  position: relative;
-  width: 100%;
-  height: 66px;
-  padding: 6px 0;
-  overflow: hidden;
-}
+  .fire-strip {
+    position: relative;
+    width: 100%;
+    height: 66px;
+    padding: 5px 0;
+    overflow: hidden;
+  }
 
-/* BASE GLOW */
-.base-glow {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 48%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255,180,90,0.9),
-    rgba(255,120,40,0.4),
-    transparent 78%
-  );
-  pointer-events: none;
-}
+  .flame {
+    position: absolute;
+    bottom: 0;
+    width: 6px;
+    height: 58%;
+    border-radius: 50% 50% 45% 45%;
+    background: linear-gradient(
+      to top,
+      #fff2cc 0%,
+      #ffd27d 25%,
+      #ff9a1f 55%,
+      #ff6a00 75%,
+      transparent 100%
+    );
+    filter: blur(0.6px);
+    box-shadow:
+      0 0 6px rgba(255,170,60,0.85),
+      0 0 14px rgba(255,120,20,0.45);
 
-/* SOFT SMOKE */
-.smoke {
-  position: absolute;
-  top: 0;
-  width: 100%;
-  height: 35%;
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.32),
-    transparent
-  );
-  pointer-events: none;
-}
+    /* 🔥 anchor flame at base */
+    transform-origin: 50% 100%;
 
-/* -------- FLAME WRAPPER (controls sway) -------- */
-.flame-wrap {
-  position: absolute;
-  bottom: 0;
-  width: 6px;
-  height: 58%;
-  transform-origin: 50% 100%;
-  animation: bendMove var(--bendSpeed) infinite ease-in-out;
-  animation-delay: var(--bendDelay);
-}
+    animation:
+      flameMove var(--speed) infinite ease-in-out,
+      waveMove 10s infinite ease-in-out,
+      bendMove var(--bendSpeed) infinite ease-in-out;
 
-/* -------- FLAME BODY (controls flicker) -------- */
-.flame {
-  width: 100%;
-  height: 100%;
-  border-radius: 50% 50% 45% 45%;
-  background: linear-gradient(
-    to top,
-    #fff2cc 0%,
-    #ffd27d 25%,
-    #ff9a1f 55%,
-    #ff6a00 75%,
-    transparent 100%
-  );
-  filter: blur(0.6px);
-  box-shadow:
-    0 0 6px rgba(255,170,60,0.85),
-    0 0 14px rgba(255,120,20,0.45);
+    animation-delay:
+      var(--delay),
+      0s,
+      var(--bendDelay);
 
-  transform-origin: 50% 100%;
-  animation:
-    flameMove var(--speed) infinite ease-in-out,
-    brightnessWave 9s infinite ease-in-out;
-  opacity: 0.95;
-}
+    opacity: 0.95;
+  }
 
-/* -------- ANIMATIONS -------- */
+  .base-glow {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 45%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255,180,90,0.85),
+      rgba(255,120,40,0.35),
+      transparent 78%
+    );
+    pointer-events: none;
+  }
 
-/* Vertical flicker (NO rotation here) */
-@keyframes flameMove {
-  0%   { transform: scaleY(0.9); }
-  45%  { transform: scaleY(1.08); }
-  100% { transform: scaleY(0.92); }
-}
+  .smoke {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 35%;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.32),
+      transparent
+    );
+    pointer-events: none;
+  }
 
-/* Gentle middle/top sway */
-@keyframes bendMove {
-  0%   { rotate: -1.4deg; }
-  50%  { rotate: 1.4deg; }
-  100% { rotate: -1.4deg; }
-}
+  .spark {
+    position: absolute;
+    bottom: 36%;
+    width: 2px;
+    height: var(--h);
+    background: linear-gradient(
+      to top,
+      rgba(255,220,150,var(--o)),
+      rgba(255,180,90,0.55),
+      transparent
+    );
+    border-radius: 50%;
+    animation: sparkFly 1.9s ease-out forwards;
+    pointer-events: none;
+  }
 
-/* Slow group rhythm */
-@keyframes brightnessWave {
-  0%   { filter: brightness(0.95); }
-  50%  { filter: brightness(1.05); }
-  100% { filter: brightness(0.95); }
-}
+  @keyframes flameMove {
+    0%   { transform: scaleY(0.88); }
+    45%  { transform: scaleY(1.08); }
+    100% { transform: scaleY(0.92); }
+  }
 
-/* SPARKS */
-.spark {
-  position: absolute;
-  bottom: 36%;
-  width: 2px;
-  height: var(--h);
-  background: linear-gradient(
-    to top,
-    rgba(255,220,150,var(--o)),
-    rgba(255,180,90,0.55),
-    transparent
-  );
-  border-radius: 50%;
-  animation: sparkFly 1.9s ease-out forwards;
-  pointer-events: none;
-}
+  @keyframes waveMove {
+    0%   { filter: brightness(0.95); }
+    50%  { filter: brightness(1.05); }
+    100% { filter: brightness(0.95); }
+  }
 
-@keyframes sparkFly {
-  0%   { transform: translateY(0) scaleY(1); opacity: 1; }
-  100% { transform: translateY(-30px) scaleY(0.2); opacity: 0; }
-}
+  /* 🔥 NEW: bend from middle/top (base fixed) */
+  @keyframes bendMove {
+    0%   { rotate: -1.6deg; }
+    50%  { rotate: 1.6deg; }
+    100% { rotate: -1.6deg; }
+  }
+
+  @keyframes sparkFly {
+    0%   { transform: translateY(0) scaleY(1); opacity: 1; }
+    100% { transform: translateY(-30px) scaleY(0.2); opacity: 0; }
+  }
 </style>
 </head>
 
@@ -139,39 +131,42 @@ body {
 </div>
 
 <script>
-const fire = document.getElementById("fire");
+  const fire = document.getElementById("fire");
 
-/* 🔥 DENSITY CONTROL */
-const flameCount = 90;              // higher = denser, still airy
-const spacingPx = fire.offsetWidth / flameCount;
+  const flameSpacingPx = 9; // dense but not wall
+  const containerWidth = fire.clientWidth;
+  const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
-/* CREATE FLAMES */
-for (let i = 0; i < flameCount; i++) {
-  const wrap = document.createElement("div");
-  wrap.className = "flame-wrap";
-  wrap.style.left = `${i * spacingPx}px`;
-  wrap.style.setProperty("--bendSpeed", `${6 + Math.random() * 3}s`);
-  wrap.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
+  for (let i = 0; i < flameCount; i++) {
+    const f = document.createElement("div");
+    f.className = "flame";
 
-  const f = document.createElement("div");
-  f.className = "flame";
-  f.style.setProperty("--speed", `${2.6 + Math.random() * 1}s`);
-  f.style.height = `${52 + Math.random() * 14}%`;
+    const jitter = (Math.random() * 2 - 1);
+    f.style.left = `${i * flameSpacingPx + jitter}px`;
 
-  wrap.appendChild(f);
-  fire.appendChild(wrap);
-}
+    f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
+    f.style.height = `${52 + Math.random() * 12}%`;
 
-/* SPARK TRAILS */
-setInterval(() => {
-  const s = document.createElement("div");
-  s.className = "spark";
-  s.style.left = `${Math.random() * 100}%`;
-  s.style.setProperty("--h", `${12 + Math.random() * 10}px`);
-  s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
-  fire.appendChild(s);
-  setTimeout(() => s.remove(), 1900);
-}, 220);
+    /* bending motion */
+    f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
+    f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
+
+    /* brightness wave phase */
+    f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+
+    fire.appendChild(f);
+  }
+
+  /* sparks */
+  setInterval(() => {
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.setProperty("--h", `${12 + Math.random() * 10}px`);
+    s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
+    fire.appendChild(s);
+    setTimeout(() => s.remove(), 1900);
+  }, 200);
 </script>
 
 </body>
