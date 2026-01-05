@@ -21,7 +21,7 @@ html, body {
   position: relative;
 }
 
-/* FRAME VIGNETTE (OPTION 4) */
+/* FRAME VIGNETTE */
 .safe-zone::before {
   content: "";
   position: absolute;
@@ -55,7 +55,7 @@ html, body {
     0 0 36px rgba(160,160,160,0.35);
 }
 
-/* INNER DEPTH (OPTION 2) */
+/* INNER DEPTH */
 .clock::before {
   content: "";
   position: absolute;
@@ -67,7 +67,7 @@ html, body {
   pointer-events: none;
 }
 
-/* GLASS DOME LAYER (OPTION 2) */
+/* GLASS DOME */
 .clock::after {
   content: "";
   position: absolute;
@@ -168,14 +168,76 @@ const hourHand = document.getElementById("hour");
 const minuteHand = document.getElementById("minute");
 const secondHand = document.getElementById("second");
 
-/* month progress angle */
+/* restore last visual state */
+const savedVisual = JSON.parse(localStorage.getItem("clockVisual") || "{}");
+if (savedVisual.glow) clock.style.boxShadow = savedVisual.glow;
+if (savedVisual.tints) {
+  root.style.setProperty("--marker-color", savedVisual.tints.marker);
+  root.style.setProperty("--hand-main", savedVisual.tints.main);
+  root.style.setProperty("--hand-soft", savedVisual.tints.soft);
+}
+
+/* month progress */
 function getMonthProgressAngle(now) {
   const day = now.getDate();
   const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   return (day / days) * 360 - 90;
 }
 
-/* MICRO-SMOOTHED UPDATE (OPTION 1) */
+/* APPLY MONTHLY STATE (RESTORED) */
+async function applyMonthlyState() {
+  try {
+    const res = await fetch("/api/engine?t=" + Date.now());
+    const data = await res.json();
+    const pl = data.monthly.pl;
+
+    let glow, tints;
+
+    if (pl > 0) {
+      glow = `
+        inset 0 0 34px rgba(0,0,0,0.9),
+        0 0 60px rgba(120,255,195,0.95)
+      `;
+      tints = {
+        marker: "rgba(195,255,235,1)",
+        main: "rgba(235,255,245,1)",
+        soft: "rgba(215,255,240,1)"
+      };
+    } else if (pl < 0) {
+      glow = `
+        inset 0 0 34px rgba(0,0,0,0.9),
+        0 0 60px rgba(240,90,90,0.9)
+      `;
+      tints = {
+        marker: "rgba(220,230,230,0.9)",
+        main: "rgba(230,235,235,0.95)",
+        soft: "rgba(210,220,220,0.9)"
+      };
+    } else {
+      glow = `
+        inset 0 0 34px rgba(0,0,0,0.9),
+        0 0 36px rgba(160,160,160,0.35)
+      `;
+      tints = {
+        marker: "rgba(190,190,190,0.8)",
+        main: "rgba(210,210,210,0.9)",
+        soft: "rgba(195,195,195,0.85)"
+      };
+    }
+
+    clock.style.boxShadow = glow;
+    root.style.setProperty("--marker-color", tints.marker);
+    root.style.setProperty("--hand-main", tints.main);
+    root.style.setProperty("--hand-soft", tints.soft);
+
+    localStorage.setItem("clockVisual", JSON.stringify({ glow, tints }));
+
+  } catch {
+    /* offline → keep last state */
+  }
+}
+
+/* SMOOTH CLOCK UPDATE */
 function updateClock() {
   const now = new Date();
   const smoothSeconds = now.getSeconds() + now.getMilliseconds() / 1000;
@@ -194,6 +256,8 @@ function updateClock() {
 
 /* INIT */
 updateClock();
+applyMonthlyState();
+setInterval(applyMonthlyState, 10 * 1000);
 </script>
 
 </body>
