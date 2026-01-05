@@ -38,17 +38,20 @@
       0 0 6px rgba(255,170,60,0.85),
       0 0 14px rgba(255,120,20,0.45);
 
+    /* 🔒 anchor at base */
     transform-origin: 50% 100%;
 
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
-      bendMove var(--bendSpeed) infinite ease-in-out;
+      bendMove var(--bendSpeed) infinite ease-in-out,
+      heatShimmer var(--heatSpeed) infinite ease-in-out;
 
     animation-delay:
       var(--delay),
       0s,
-      var(--bendDelay);
+      var(--bendDelay),
+      0s;
 
     opacity: 0.95;
   }
@@ -108,10 +111,24 @@
     100% { filter: brightness(0.95); }
   }
 
+  /* gentle bend — base fixed */
   @keyframes bendMove {
-    0%   { rotate: -1.6deg; }
-    50%  { rotate: 1.6deg; }
-    100% { rotate: -1.6deg; }
+    0%   { rotate: -1.4deg; }
+    50%  { rotate: 1.4deg; }
+    100% { rotate: -1.4deg; }
+  }
+
+  /* 🔥 TOP-WEIGHTED HEAT SHIMMER */
+  @keyframes heatShimmer {
+    0% {
+      transform: translateX(0px) skewX(0deg);
+    }
+    50% {
+      transform: translateX(0.6px) skewX(0.6deg);
+    }
+    100% {
+      transform: translateX(0px) skewX(0deg);
+    }
   }
 
   @keyframes sparkFly {
@@ -131,7 +148,7 @@
 <script>
   const fire = document.getElementById("fire");
 
-  const flameSpacingPx = 9;
+  const flameSpacingPx = 9; // dense but breathable
   const containerWidth = fire.clientWidth;
   const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
@@ -147,15 +164,16 @@
 
     f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
     f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
-    f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
 
-    /* 🔥 Option A: reduced stereo heat drift */
-    const dir = i % 2 === 0 ? -0.7 : 0.7;
-    f.style.translate = `${dir}px 0`;
+    /* 🔥 heat shimmer timing */
+    f.style.setProperty("--heatSpeed", `${4.2 + Math.random() * 2.2}s`);
+
+    f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
 
     fire.appendChild(f);
   }
 
+  /* sparks */
   setInterval(() => {
     const s = document.createElement("div");
     s.className = "spark";
