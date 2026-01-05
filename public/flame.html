@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Transparent Termination)</title>
+<title>Premium Fire Strip (Visual Termination)</title>
 
 <style>
   body {
@@ -19,7 +19,22 @@
     background: transparent;
   }
 
-  /* ================= FLAMES ================= */
+  /* --- ULTRA LIGHT VISUAL TERMINATION HAZE --- */
+  .termination-haze {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 28%;
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.045),
+      rgba(255,255,255,0.02),
+      rgba(255,255,255,0)
+    );
+    pointer-events: none;
+  }
+
+  /* --- FLAMES --- */
   .flame {
     position: absolute;
     bottom: 0;
@@ -50,7 +65,7 @@
     opacity: 0.95;
   }
 
-  /* ================= BASE GLOW ================= */
+  /* --- BASE GLOW --- */
   .base-glow {
     position: absolute;
     bottom: 0;
@@ -65,34 +80,17 @@
     pointer-events: none;
   }
 
-  /* ================= TRUE VISUAL TERMINATION ================= */
-  .termination-mask {
+  /* --- HEADROOM (PURE TRANSPARENT) --- */
+  .smoke {
     position: absolute;
     top: 0;
     width: 100%;
-    height: 38%;
+    height: 40%;
+    background: transparent;
     pointer-events: none;
-    z-index: 20;
-
-    /* REAL transparency – no dark overlay */
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      rgba(0,0,0,0.35) 30%,
-      rgba(0,0,0,0.75) 60%,
-      black 100%
-    );
-
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      rgba(0,0,0,0.35) 30%,
-      rgba(0,0,0,0.75) 60%,
-      black 100%
-    );
   }
 
-  /* ================= SPARKS ================= */
+  /* --- SPARKS --- */
   .spark {
     position: absolute;
     bottom: 50%;
@@ -109,28 +107,6 @@
     pointer-events: none;
   }
 
-  /* ================= FOG ================= */
-  .fog {
-    position: absolute;
-    bottom: 48%;
-    width: 160px;
-    height: 44px;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(255,255,255,0.32),
-      rgba(255,255,255,0.14),
-      rgba(255,255,255,0.05),
-      transparent 72%
-    );
-    filter: blur(10px);
-    opacity: 0;
-    border-radius: 50%;
-    animation: fogRise 6s ease-in forwards;
-    pointer-events: none;
-    mix-blend-mode: screen;
-  }
-
-  /* ================= ANIMATIONS ================= */
   @keyframes flameMove {
     0%   { transform: scaleY(0.88); }
     45%  { transform: scaleY(1.08); }
@@ -153,22 +129,15 @@
     0%   { transform: translateY(0) scaleY(1); opacity: 1; }
     100% { transform: translateY(-38px) scaleY(0.2); opacity: 0; }
   }
-
-  @keyframes fogRise {
-    0%   { transform: translateY(0) scale(1); opacity: 0; }
-    20%  { opacity: 0.55; }
-    55%  { opacity: 0.45; transform: translateY(-26px) scale(1.08); }
-    75%  { opacity: 0.18; transform: translateY(-36px) scale(1.18); }
-    100% { opacity: 0; transform: translateY(-44px) scale(1.25); }
-  }
 </style>
 </head>
 
 <body>
 
 <div class="fire-strip" id="fire">
+  <div class="termination-haze"></div>
   <div class="base-glow"></div>
-  <div class="termination-mask"></div>
+  <div class="smoke"></div>
 </div>
 
 <script>
@@ -182,13 +151,16 @@ const flameCount = Math.floor(containerWidth / flameSpacingPx);
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
   f.className = "flame";
+
   const jitter = (Math.random() * 2 - 1);
   f.style.left = `${i * flameSpacingPx + jitter}px`;
+
   f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
   f.style.height = `${48 + Math.random() * 10}%`;
   f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
   f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
   f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+
   fire.appendChild(f);
 }
 
@@ -201,18 +173,7 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 260);
-
-/* Fog bursts */
-setInterval(() => {
-  const fog = document.createElement("div");
-  fog.className = "fog";
-  fog.style.left = `${Math.random() * 80 + 10}%`;
-  fog.style.animationDuration = `${5.5 + Math.random() * 2}s`;
-  fog.style.width = `${140 + Math.random() * 80}px`;
-  fire.appendChild(fog);
-  setTimeout(() => fog.remove(), 6000);
-}, 4800 + Math.random() * 3500);
+}, 220);
 </script>
 
 </body>
