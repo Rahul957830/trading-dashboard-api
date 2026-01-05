@@ -134,7 +134,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* -------- RING -------- */
     pulse += 0.115;
-    const breathing = 22 + Math.sin(pulse) * 8;
+    const breathing = 30 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
@@ -151,14 +151,6 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.shadowBlur = breathing;
     ctx.stroke();
     ctx.restore();
-
-    // inner energy stroke (this adds density)
-ctx.beginPath();
-ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
-ctx.strokeStyle = "rgba(120,255,200,1)";
-ctx.lineWidth = 3;
-ctx.shadowBlur = 6;
-ctx.stroke();
 
     /* -------- RING SHIMMER -------- */
     if (state === "HEALTHY" && Math.random() < 0.45) {
