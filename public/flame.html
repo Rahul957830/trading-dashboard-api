@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Balanced Flames)</title>
+<title>Premium Fire Strip (Clean Smoke)</title>
 
 <style>
   body {
@@ -14,8 +14,9 @@
   .fire-strip {
     position: relative;
     width: 100%;
-    height: 85px; /* tighter total height */
+    height: 85px;
     overflow: hidden;
+    background: transparent;
   }
 
   /* --- FLAMES --- */
@@ -23,7 +24,7 @@
     position: absolute;
     bottom: 0;
     width: 6px;
-    height: 55%; /* shorter flames */
+    height: 55%;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -64,24 +65,27 @@
     pointer-events: none;
   }
 
-  /* --- HEADROOM / SMOKE ZONE --- */
+  /* --- SMOKE (AIRY, TRANSPARENT, NO GREY LAYER) --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
-    height: 40%; /* taller dark zone for visible sparks */
+    height: 42%;
     background: linear-gradient(
       to bottom,
-      rgba(0,0,0,0.35),
+      rgba(255,200,150,0.08),
+      rgba(255,200,150,0.04),
+      rgba(255,200,150,0.02),
       transparent
     );
+    filter: blur(8px);
     pointer-events: none;
   }
 
   /* --- SPARKS --- */
   .spark {
     position: absolute;
-    bottom: 50%; /* start above flames */
+    bottom: 50%;
     width: 2px;
     height: var(--h);
     background: linear-gradient(
@@ -121,6 +125,7 @@
 </head>
 
 <body>
+
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
   <div class="smoke"></div>
@@ -133,6 +138,7 @@ const flameSpacingPx = 9;
 const containerWidth = fire.clientWidth;
 const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
+/* Flames */
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
   f.className = "flame";
@@ -141,7 +147,7 @@ for (let i = 0; i < flameCount; i++) {
   f.style.left = `${i * flameSpacingPx + jitter}px`;
 
   f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  f.style.height = `${48 + Math.random() * 10}%`; // shorter flames
+  f.style.height = `${48 + Math.random() * 10}%`;
   f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
   f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
   f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
@@ -149,7 +155,7 @@ for (let i = 0; i < flameCount; i++) {
   fire.appendChild(f);
 }
 
-/* Sparks rise cleanly in headroom */
+/* Sparks */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -158,7 +164,8 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 200);
+}, 220);
 </script>
+
 </body>
 </html>
