@@ -152,6 +152,14 @@ function Reactor(canvas, baseColor, warningColor) {
     ctx.stroke();
     ctx.restore();
 
+    // inner energy stroke (this adds density)
+ctx.beginPath();
+ctx.arc(C.x, C.y, R, 0, Math.PI * 2);
+ctx.strokeStyle = "rgba(120,255,200,0.6)";
+ctx.lineWidth = 3;
+ctx.shadowBlur = 6;
+ctx.stroke();
+
     /* -------- RING SHIMMER -------- */
     if (state === "HEALTHY" && Math.random() < 0.45) {
       const angle = Math.random() * Math.PI * 2;
