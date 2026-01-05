@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Weekly Linked)</title>
+<title>Premium Fire Strip – Blue Plasma</title>
 
 <style>
   body {
@@ -11,19 +11,14 @@
     overflow: hidden;
   }
 
-  /* ================= FIRE STRIP ================= */
   .fire-strip {
     position: relative;
     width: 100%;
     height: 85px;
     overflow: hidden;
-
-    /* 🔗 COLOR VARIABLES (DEFAULT = ORANGE) */
-    --fire-core: #ff9a1f;
-    --fire-glow: rgba(255,120,20,0.45);
   }
 
-  /* ================= FLAMES ================= */
+  /* --- FLAMES (BLUE FIRE) --- */
   .flame {
     position: absolute;
     bottom: 0;
@@ -32,33 +27,30 @@
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
-      #fff2cc 0%,
-      color-mix(in srgb, var(--fire-core) 30%, #fff2cc) 25%,
-      var(--fire-core) 55%,
-      color-mix(in srgb, var(--fire-core) 85%, #000) 75%,
+      rgba(220,245,255,0.95) 0%,
+      rgba(160,220,255,0.9) 25%,
+      rgba(90,170,255,0.85) 55%,
+      rgba(40,120,255,0.8) 75%,
       transparent 100%
     );
     filter: blur(0.6px);
     box-shadow:
-      0 0 6px rgba(255,170,60,0.85),
-      0 0 14px var(--fire-glow);
+      0 0 8px rgba(120,200,255,0.85),
+      0 0 18px rgba(60,140,255,0.45);
 
     transform-origin: 50% 100%;
-
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
       bendMove var(--bendSpeed) infinite ease-in-out;
-
     animation-delay:
       var(--delay),
       0s,
       var(--bendDelay);
-
     opacity: 0.95;
   }
 
-  /* ================= BASE GLOW ================= */
+  /* --- BASE COOL GLOW --- */
   .base-glow {
     position: absolute;
     bottom: 0;
@@ -66,14 +58,32 @@
     height: 50%;
     background: radial-gradient(
       ellipse at center,
-      rgba(255,180,90,0.85),
-      rgba(255,120,40,0.35),
-      transparent 78%
+      rgba(120,200,255,0.65),
+      rgba(60,120,200,0.25),
+      transparent 75%
     );
     pointer-events: none;
   }
 
-  /* ================= HEADROOM / SMOKE ================= */
+  /* --- FOG / VAPOR (RESTORED) --- */
+  .fog {
+    position: absolute;
+    bottom: 55%;
+    width: 120%;
+    height: 40%;
+    left: -10%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(180,220,255,0.18),
+      rgba(120,180,255,0.08),
+      transparent 70%
+    );
+    filter: blur(18px);
+    animation: fogDrift 9s infinite ease-in-out;
+    pointer-events: none;
+  }
+
+  /* --- HEADROOM DARK ZONE --- */
   .smoke {
     position: absolute;
     top: 0;
@@ -81,13 +91,13 @@
     height: 40%;
     background: linear-gradient(
       to bottom,
-      rgba(0,0,0,0.35),
+      rgba(0,0,0,0.32),
       transparent
     );
     pointer-events: none;
   }
 
-  /* ================= SPARKS ================= */
+  /* --- SPARKS (CLEAN, COOL) --- */
   .spark {
     position: absolute;
     bottom: 50%;
@@ -95,8 +105,8 @@
     height: var(--h);
     background: linear-gradient(
       to top,
-      rgba(255,220,150,var(--o)),
-      rgba(255,180,90,0.55),
+      rgba(210,240,255,var(--o)),
+      rgba(150,210,255,0.55),
       transparent
     );
     border-radius: 50%;
@@ -104,7 +114,6 @@
     pointer-events: none;
   }
 
-  /* ================= ANIMATIONS ================= */
   @keyframes flameMove {
     0%   { transform: scaleY(0.88); }
     45%  { transform: scaleY(1.08); }
@@ -113,7 +122,7 @@
 
   @keyframes waveMove {
     0%   { filter: brightness(0.95); }
-    50%  { filter: brightness(1.05); }
+    50%  { filter: brightness(1.08); }
     100% { filter: brightness(0.95); }
   }
 
@@ -121,6 +130,12 @@
     0%   { rotate: -1.4deg; }
     50%  { rotate: 1.4deg; }
     100% { rotate: -1.4deg; }
+  }
+
+  @keyframes fogDrift {
+    0%   { transform: translateX(-4%) translateY(0); opacity: 0.35; }
+    50%  { transform: translateX(4%) translateY(-4px); opacity: 0.6; }
+    100% { transform: translateX(-4%) translateY(0); opacity: 0.35; }
   }
 
   @keyframes sparkFly {
@@ -131,19 +146,30 @@
 </head>
 
 <body>
-
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
+  <div class="fog"></div>
   <div class="smoke"></div>
 </div>
 
 <script>
-/* ================= BUILD FLAMES ================= */
 const fire = document.getElementById("fire");
 
+/* flame layout */
 const flameSpacingPx = 9;
 const containerWidth = fire.clientWidth;
 const flameCount = Math.floor(containerWidth / flameSpacingPx);
+
+/* engine-ui fetch (weekly profit only) */
+async function fetchProfit() {
+  try {
+    const r = await fetch("https://trading-dashboard-api-five.vercel.app/api/engine-ui?t=" + Date.now());
+    const d = await r.json();
+    return d.weekly?.pl ?? 0;
+  } catch {
+    return 0;
+  }
+}
 
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
@@ -161,42 +187,16 @@ for (let i = 0; i < flameCount; i++) {
   fire.appendChild(f);
 }
 
-/* ================= SPARKS ================= */
+/* sparks */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
   s.style.left = `${Math.random() * 100}%`;
   s.style.setProperty("--h", `${10 + Math.random() * 10}px`);
-  s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
+  s.style.setProperty("--o", `${0.6 + Math.random() * 0.25}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 200);
-
-/* ================= WEEKLY PROFIT LINK ================= */
-async function syncWeeklyFireColor() {
-  try {
-    const res = await fetch(
-      "https://trading-dashboard-api-five.vercel.app/api/engine-ui?t=" + Date.now(),
-      { cache: "no-store" }
-    );
-    const data = await res.json();
-    const weeklyPL = data?.weekly?.pl ?? 0;
-
-    if (weeklyPL > 0) {
-      fire.style.setProperty("--fire-core", "rgba(90,200,150,0.95)");
-      fire.style.setProperty("--fire-glow", "rgba(90,200,150,0.45)");
-    } else {
-      fire.style.setProperty("--fire-core", "#ff9a1f");
-      fire.style.setProperty("--fire-glow", "rgba(255,120,20,0.45)");
-    }
-  } catch {
-    /* keep last state */
-  }
-}
-
-syncWeeklyFireColor();
-setInterval(syncWeeklyFireColor, 10000);
+}, 320);
 </script>
-
 </body>
 </html>
