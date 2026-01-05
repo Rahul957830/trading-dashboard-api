@@ -130,14 +130,14 @@ function drawInnerDepth() {
 
 /* ================= RING ================= */
 function drawRing(color, glow, status) {
-  glowPhase += 0.10;
+  glowPhase += 0.02;
   const breathing = 30 + Math.sin(glowPhase) * 12;
 
   ctx.save();
   ctx.beginPath();
   ctx.arc(CENTER.x, CENTER.y, RADIUS, 0, Math.PI * 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 15;
+  ctx.lineWidth = 8;
   ctx.shadowColor = glow;
   ctx.shadowBlur = breathing;
   ctx.stroke();
