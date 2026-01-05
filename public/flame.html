@@ -19,6 +19,23 @@
     background: transparent;
   }
 
+  /* --- VISUAL TERMINATION MASK --- */
+  .termination-mask {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 35%;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.55),
+      rgba(0,0,0,0.25),
+      rgba(0,0,0,0.08),
+      transparent
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+
   /* --- FLAMES --- */
   .flame {
     position: absolute;
@@ -65,13 +82,13 @@
     pointer-events: none;
   }
 
-  /* --- HEADROOM (TRANSPARENT — NO PAINT) --- */
+  /* --- HEADROOM (TRANSPARENT) --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
     height: 40%;
-    background: transparent; /* 🔑 THIS fixes the issue */
+    background: transparent;
     pointer-events: none;
   }
 
@@ -92,7 +109,7 @@
     pointer-events: none;
   }
 
-  /* --- FOG (VISIBLE, FLOATING, NOT CLIPPED) --- */
+  /* --- FOG --- */
   .fog {
     position: absolute;
     bottom: 48%;
@@ -150,6 +167,7 @@
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
   <div class="smoke"></div>
+  <div class="termination-mask"></div>
 </div>
 
 <script>
