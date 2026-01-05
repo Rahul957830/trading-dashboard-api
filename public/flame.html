@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Fog Visible, Transparent)</title>
+<title>Premium Fire Strip (Fog Enhanced)</title>
 
 <style>
   body {
@@ -16,7 +16,6 @@
     width: 100%;
     height: 85px;
     overflow: hidden;
-    background: transparent;
   }
 
   /* --- FLAMES --- */
@@ -50,25 +49,33 @@
     opacity: 0.95;
   }
 
-  /* --- BASE / SMOKE (TRANSPARENT) --- */
-  .base-glow,
-  .smoke {
-    background: transparent;
-    pointer-events: none;
-  }
-
+  /* --- BASE GLOW --- */
   .base-glow {
     position: absolute;
     bottom: 0;
     width: 100%;
     height: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255,180,90,0.85),
+      rgba(255,120,40,0.35),
+      transparent 78%
+    );
+    pointer-events: none;
   }
 
+  /* --- SMOKE / HEADROOM --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
     height: 40%;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.35),
+      transparent
+    );
+    pointer-events: none;
   }
 
   /* --- SPARKS --- */
@@ -88,10 +95,10 @@
     pointer-events: none;
   }
 
-  /* --- FOG (VISIBLE BUT CLEAN) --- */
+  /* --- FOG (VISIBLE, NOT CLIPPED) --- */
   .fog {
     position: absolute;
-    bottom: 55%;
+    bottom: 48%;
     width: 180px;
     height: 48px;
     background: radial-gradient(
@@ -110,11 +117,25 @@
   }
 
   @keyframes fogRise {
-    0%   { transform: translateY(0) scale(1); opacity: 0; }
-    20%  { opacity: 0.55; }
-    60%  { opacity: 0.45; transform: translateY(-30px) scale(1.1); }
-    90%  { opacity: 0.25; transform: translateY(-52px) scale(1.25); }
-    100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.55;
+    }
+    55% {
+      opacity: 0.45;
+      transform: translateY(-26px) scale(1.08);
+    }
+    75% {
+      opacity: 0.18;
+      transform: translateY(-36px) scale(1.18);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-44px) scale(1.25);
+    }
   }
 
   @keyframes flameMove {
@@ -152,7 +173,8 @@
 const fire = document.getElementById("fire");
 
 const flameSpacingPx = 9;
-const flameCount = Math.floor(fire.clientWidth / flameSpacingPx);
+const containerWidth = fire.clientWidth;
+const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
 /* Flames */
 for (let i = 0; i < flameCount; i++) {
@@ -179,16 +201,16 @@ setInterval(() => {
   setTimeout(() => s.remove(), 1900);
 }, 200);
 
-/* Fog bursts (VISIBLE) */
+/* Fog bursts */
 setInterval(() => {
   const fog = document.createElement("div");
   fog.className = "fog";
-  fog.style.left = `${Math.random() * 75 + 12}%`;
+  fog.style.left = `${Math.random() * 80 + 10}%`;
   fog.style.animationDuration = `${5.5 + Math.random() * 2}s`;
   fog.style.width = `${140 + Math.random() * 80}px`;
   fire.appendChild(fog);
   setTimeout(() => fog.remove(), 6000);
-}, 4200 + Math.random() * 3200);
+}, 4800 + Math.random() * 3500);
 </script>
 </body>
 </html>
