@@ -18,11 +18,23 @@
     overflow: hidden;
   }
 
+  /* OUTER FLAME — SHAPE ONLY (NO TRANSFORM ANIMATION) */
   .flame {
     position: absolute;
     bottom: 0;
     width: 6px;
+    min-width: 6px;
     height: 55%;
+    pointer-events: none;
+
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  /* INNER FLAME — ALL MOTION LIVES HERE */
+  .flame-inner {
+    width: 100%;
+    height: 100%;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -32,6 +44,7 @@
       #ff6a00 75%,
       transparent 100%
     );
+
     filter: blur(0.6px);
     box-shadow:
       0 0 6px rgba(255,170,60,0.85),
@@ -51,6 +64,7 @@
       var(--bendDelay),
       var(--heatDelay);
 
+    animation-fill-mode: both;
     opacity: 0.95;
   }
 
@@ -79,23 +93,6 @@
       transparent
     );
     pointer-events: none;
-  }
-
-  /* 🔥 DENSER COMBUSTION FOG */
-  .fog-wisp {
-    position: absolute;
-    bottom: 58%;
-    width: 140px;
-    height: 42px;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(180,160,140,0.45),
-      rgba(160,140,120,0.25),
-      transparent 70%
-    );
-    opacity: 0;
-    pointer-events: none;
-    animation: fogRise 6.5s ease-out forwards;
   }
 
   .spark {
@@ -133,23 +130,9 @@
   }
 
   @keyframes heatShimmer {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(0.3px); }
-    100% { transform: translateX(0); }
-  }
-
-  @keyframes fogRise {
-    0% {
-      transform: translateY(0) scale(0.9);
-      opacity: 0;
-    }
-    20% {
-      opacity: 0.55;
-    }
-    100% {
-      transform: translateY(-28px) scale(1.25);
-      opacity: 0;
-    }
+    0%   { translate: 0px 0; }
+    50%  { translate: 0.4px 0; }
+    100% { translate: 0px 0; }
   }
 
   @keyframes sparkFly {
@@ -160,6 +143,7 @@
 </head>
 
 <body>
+
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
   <div class="smoke"></div>
@@ -168,27 +152,30 @@
 <script>
 const fire = document.getElementById("fire");
 
-/* Flames */
 const flameSpacingPx = 9;
-const flameCount = Math.floor(fire.clientWidth / flameSpacingPx);
+const containerWidth = fire.clientWidth;
+const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
 for (let i = 0; i < flameCount; i++) {
-  const f = document.createElement("div");
-  f.className = "flame";
+  const flame = document.createElement("div");
+  flame.className = "flame";
+  flame.style.left = `${i * flameSpacingPx + (Math.random() * 2 - 1)}px`;
 
-  f.style.left = `${i * flameSpacingPx + (Math.random() * 2 - 1)}px`;
-  f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  f.style.height = `${48 + Math.random() * 10}%`;
-  f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
-  f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
-  f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
-  f.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
-  f.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
+  const inner = document.createElement("div");
+  inner.className = "flame-inner";
 
-  fire.appendChild(f);
+  inner.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
+  inner.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
+  inner.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
+  inner.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+  inner.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
+  inner.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
+
+  flame.appendChild(inner);
+  fire.appendChild(flame);
 }
 
-/* Sparks (already reduced) */
+/* Sparks — reduced frequency (already good) */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -197,19 +184,8 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 320);
-
-/* 🔥 DENSER FOG — VISIBLE */
-setInterval(() => {
-  const fogCount = 1 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < fogCount; i++) {
-    const fog = document.createElement("div");
-    fog.className = "fog-wisp";
-    fog.style.left = `${10 + Math.random() * 80}%`;
-    fire.appendChild(fog);
-    setTimeout(() => fog.remove(), 6500);
-  }
-}, 6500 + Math.random() * 3000);
+}, 350);
 </script>
+
 </body>
 </html>
