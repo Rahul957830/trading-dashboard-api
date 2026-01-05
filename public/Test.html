@@ -18,22 +18,10 @@
     overflow: hidden;
   }
 
-  /* ---------- FLAME WRAPPER (SHIMMER LIVES HERE) ---------- */
-  .flame-wrap {
-    position: absolute;
-    bottom: 0;
-    width: 6px;
-    height: 100%;
-    transform-origin: 50% 100%;
-    animation: heatShimmer var(--heatSpeed) infinite linear;
-    animation-delay: var(--heatDelay);
-  }
-
-  /* ---------- ACTUAL FLAME (ALL MOTION HERE) ---------- */
   .flame {
     position: absolute;
     bottom: 0;
-    width: 100%;
+    width: 6px;
     height: 55%;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
@@ -54,12 +42,14 @@
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
-      bendMove var(--bendSpeed) infinite ease-in-out;
+      bendMove var(--bendSpeed) infinite ease-in-out,
+      heatShimmer var(--heatSpeed) infinite linear;
 
     animation-delay:
       var(--delay),
       0s,
-      var(--bendDelay);
+      var(--bendDelay),
+      var(--heatDelay);
 
     opacity: 0.95;
   }
@@ -91,6 +81,23 @@
     pointer-events: none;
   }
 
+  /* 🔥 NEW: combustion fog wisp */
+  .fog-wisp {
+    position: absolute;
+    bottom: 60%;
+    width: 80px;
+    height: 24px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(120,120,120,0.25),
+      rgba(120,120,120,0.15),
+      transparent 70%
+    );
+    opacity: 0;
+    pointer-events: none;
+    animation: fogRise 5s ease-out forwards;
+  }
+
   .spark {
     position: absolute;
     bottom: 50%;
@@ -106,8 +113,6 @@
     animation: sparkFly 1.9s ease-out forwards;
     pointer-events: none;
   }
-
-  /* ---------- ANIMATIONS ---------- */
 
   @keyframes flameMove {
     0%   { transform: scaleY(0.88); }
@@ -127,11 +132,24 @@
     100% { rotate: -1.4deg; }
   }
 
-  /* 🔥 HEAT SHIMMER (SAFE NOW) */
   @keyframes heatShimmer {
-    0%   { transform: translateX(0px); }
-    50%  { transform: translateX(0.22px); }
-    100% { transform: translateX(0px); }
+    0%   { transform: translateX(0); }
+    50%  { transform: translateX(0.3px); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes fogRise {
+    0% {
+      transform: translateY(0) scale(0.9);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.35;
+    }
+    100% {
+      transform: translateY(-22px) scale(1.15);
+      opacity: 0;
+    }
   }
 
   @keyframes sparkFly {
@@ -150,34 +168,27 @@
 <script>
 const fire = document.getElementById("fire");
 
+/* Flames */
 const flameSpacingPx = 9;
-const containerWidth = fire.clientWidth;
-const flameCount = Math.floor(containerWidth / flameSpacingPx);
+const flameCount = Math.floor(fire.clientWidth / flameSpacingPx);
 
 for (let i = 0; i < flameCount; i++) {
-  const wrap = document.createElement("div");
-  wrap.className = "flame-wrap";
+  const f = document.createElement("div");
+  f.className = "flame";
 
-  const flame = document.createElement("div");
-  flame.className = "flame";
+  f.style.left = `${i * flameSpacingPx + (Math.random() * 2 - 1)}px`;
+  f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
+  f.style.height = `${48 + Math.random() * 10}%`;
+  f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
+  f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
+  f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+  f.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
+  f.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
 
-  const jitter = (Math.random() * 2 - 1);
-  wrap.style.left = `${i * flameSpacingPx + jitter}px`;
-
-  flame.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  flame.style.height = `${48 + Math.random() * 10}%`;
-  flame.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
-  flame.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
-  flame.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
-
-  wrap.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
-  wrap.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
-
-  wrap.appendChild(flame);
-  fire.appendChild(wrap);
+  fire.appendChild(f);
 }
 
-/* Sparks */
+/* Sparks (reduced frequency) */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -186,7 +197,17 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 380);
+}, 320);
+
+/* 🔥 Combustion fog (episodic, safe) */
+setInterval(() => {
+  const fog = document.createElement("div");
+  fog.className = "fog-wisp";
+  fog.style.left = `${20 + Math.random() * 60}%`;
+  fire.appendChild(fog);
+  setTimeout(() => fog.remove(), 5200);
+}, 12000 + Math.random() * 6000);
 </script>
+
 </body>
 </html>
