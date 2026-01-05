@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip</title>
+<title>Premium Fire Strip (Balanced Flames)</title>
 
 <style>
   body {
@@ -14,15 +14,16 @@
   .fire-strip {
     position: relative;
     width: 100%;
-    height: 85px;
+    height: 85px; /* tighter total height */
     overflow: hidden;
   }
 
+  /* --- FLAMES --- */
   .flame {
     position: absolute;
     bottom: 0;
     width: 6px;
-    height: 55%;
+    height: 55%; /* shorter flames */
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -36,24 +37,19 @@
     box-shadow:
       0 0 6px rgba(255,170,60,0.85),
       0 0 14px rgba(255,120,20,0.45);
-
     transform-origin: 50% 100%;
-
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
-      bendMove var(--bendSpeed) infinite ease-in-out,
-      heatShimmer var(--heatSpeed) infinite linear;
-
+      bendMove var(--bendSpeed) infinite ease-in-out;
     animation-delay:
       var(--delay),
       0s,
-      var(--bendDelay),
-      var(--heatDelay);
-
+      var(--bendDelay);
     opacity: 0.95;
   }
 
+  /* --- BASE GLOW --- */
   .base-glow {
     position: absolute;
     bottom: 0;
@@ -68,11 +64,12 @@
     pointer-events: none;
   }
 
+  /* --- HEADROOM / SMOKE ZONE --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
-    height: 40%;
+    height: 40%; /* taller dark zone for visible sparks */
     background: linear-gradient(
       to bottom,
       rgba(0,0,0,0.35),
@@ -81,26 +78,10 @@
     pointer-events: none;
   }
 
-  /* 🔥 DENSER COMBUSTION FOG */
-  .fog-wisp {
-    position: absolute;
-    bottom: 58%;
-    width: 140px;
-    height: 42px;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(180,160,140,0.45),
-      rgba(160,140,120,0.25),
-      transparent 70%
-    );
-    opacity: 0;
-    pointer-events: none;
-    animation: fogRise 6.5s ease-out forwards;
-  }
-
+  /* --- SPARKS --- */
   .spark {
     position: absolute;
-    bottom: 50%;
+    bottom: 50%; /* start above flames */
     width: 2px;
     height: var(--h);
     background: linear-gradient(
@@ -132,26 +113,6 @@
     100% { rotate: -1.4deg; }
   }
 
-  @keyframes heatShimmer {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(0.3px); }
-    100% { transform: translateX(0); }
-  }
-
-  @keyframes fogRise {
-    0% {
-      transform: translateY(0) scale(0.9);
-      opacity: 0;
-    }
-    20% {
-      opacity: 0.55;
-    }
-    100% {
-      transform: translateY(-28px) scale(1.25);
-      opacity: 0;
-    }
-  }
-
   @keyframes sparkFly {
     0%   { transform: translateY(0) scaleY(1); opacity: 1; }
     100% { transform: translateY(-38px) scaleY(0.2); opacity: 0; }
@@ -168,27 +129,27 @@
 <script>
 const fire = document.getElementById("fire");
 
-/* Flames */
 const flameSpacingPx = 9;
-const flameCount = Math.floor(fire.clientWidth / flameSpacingPx);
+const containerWidth = fire.clientWidth;
+const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
   f.className = "flame";
 
-  f.style.left = `${i * flameSpacingPx + (Math.random() * 2 - 1)}px`;
+  const jitter = (Math.random() * 2 - 1);
+  f.style.left = `${i * flameSpacingPx + jitter}px`;
+
   f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  f.style.height = `${48 + Math.random() * 10}%`;
+  f.style.height = `${48 + Math.random() * 10}%`; // shorter flames
   f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
   f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
   f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
-  f.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
-  f.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
 
   fire.appendChild(f);
 }
 
-/* Sparks (already reduced) */
+/* Sparks rise cleanly in headroom */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -197,19 +158,7 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 320);
-
-/* 🔥 DENSER FOG — VISIBLE */
-setInterval(() => {
-  const fogCount = 1 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < fogCount; i++) {
-    const fog = document.createElement("div");
-    fog.className = "fog-wisp";
-    fog.style.left = `${10 + Math.random() * 80}%`;
-    fire.appendChild(fog);
-    setTimeout(() => fog.remove(), 6500);
-  }
-}, 6500 + Math.random() * 3000);
+}, 200);
 </script>
 </body>
 </html>
