@@ -12,38 +12,48 @@
     overflow: hidden;
   }
 
-  canvas {
-    display: block;
+  /* Notion-safe fixed height */
+  #wrap {
     width: 100%;
     height: 90px;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 </style>
 </head>
 
 <body>
 
-<canvas id="flame"></canvas>
+<div id="wrap">
+  <canvas id="flame"></canvas>
+</div>
 
 <script>
 const canvas = document.getElementById("flame");
 const ctx = canvas.getContext("2d");
 
+/* ---------- SAFE RESIZE ---------- */
 function resize() {
-  const dpr = devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = canvas.clientHeight * dpr;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+
+  canvas.width  = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 resize();
 window.addEventListener("resize", resize);
 
-/* ================= FLAME SETUP ================= */
+/* ---------- FLAMES ---------- */
 const flames = [];
-
-/* ↓ REDUCED density (this was the main issue) */
 const flameDensity = 0.75;
 
-function createFlames() {
+function initFlames() {
   flames.length = 0;
   const count = Math.floor(canvas.clientWidth * flameDensity);
 
@@ -51,16 +61,16 @@ function createFlames() {
     flames.push({
       x: i / count,
       phase: Math.random() * Math.PI * 2,
-      height: 0.42 + Math.random() * 0.22, // more variance
+      height: 0.42 + Math.random() * 0.22,
       sway: 0.6 + Math.random() * 0.8,
       speed: 0.7 + Math.random() * 0.4,
-      offset: (Math.random() - 0.5) * 6 // micro gaps
+      offset: (Math.random() - 0.5) * 6
     });
   }
 }
-createFlames();
+initFlames();
 
-/* ================= LOOP ================= */
+/* ---------- LOOP ---------- */
 let t = 0;
 
 function draw() {
@@ -71,19 +81,19 @@ function draw() {
   const h = canvas.clientHeight;
   const baseY = h * 0.95;
 
-  /* ---- base glow ---- */
+  /* base glow */
   const glow = ctx.createRadialGradient(
     w / 2, baseY,
     10,
     w / 2, baseY,
     h * 0.55
   );
-  glow.addColorStop(0, "rgba(255,170,80,0.5)");
+  glow.addColorStop(0, "rgba(255,170,80,0.55)");
   glow.addColorStop(1, "rgba(255,120,40,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
 
-  /* ---- flames ---- */
+  /* flames */
   flames.forEach(f => {
     const x = f.x * w + f.offset;
     const flameH = h * f.height;
@@ -92,7 +102,7 @@ function draw() {
     const grad = ctx.createLinearGradient(0, baseY - flameH, 0, baseY);
     grad.addColorStop(0, "rgba(255,240,200,0)");
     grad.addColorStop(0.35, "rgba(255,200,120,0.85)");
-    grad.addColorStop(0.65, "rgba(255,140,40,0.9)");
+    grad.addColorStop(0.65, "rgba(255,140,40,0.95)");
     grad.addColorStop(1, "rgba(255,90,20,1)");
 
     ctx.beginPath();
@@ -113,7 +123,7 @@ function draw() {
     ctx.fill();
   });
 
-  /* ---- subtle haze above tips ---- */
+  /* haze above tips */
   ctx.fillStyle = "rgba(0,0,0,0.12)";
   ctx.fillRect(0, 0, w, h * 0.35);
 
