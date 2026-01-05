@@ -65,13 +65,13 @@
     pointer-events: none;
   }
 
-  /* --- HEADROOM (TRANSPARENT, NO PAINT) --- */
+  /* --- HEADROOM (TRANSPARENT — NO PAINT) --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
     height: 40%;
-    background: transparent;
+    background: transparent; /* 🔑 THIS fixes the issue */
     pointer-events: none;
   }
 
@@ -92,15 +92,15 @@
     pointer-events: none;
   }
 
-  /* --- FOG (SAFE CEILING) --- */
+  /* --- FOG (VISIBLE, FLOATING, NOT CLIPPED) --- */
   .fog {
     position: absolute;
-    bottom: 46%;              /* 🔑 lower start */
-    width: 170px;
-    height: 46px;
+    bottom: 48%;
+    width: 180px;
+    height: 48px;
     background: radial-gradient(
       ellipse at center,
-      rgba(255,255,255,0.34),
+      rgba(255,255,255,0.38),
       rgba(255,255,255,0.18),
       rgba(255,255,255,0.06),
       transparent 72%
@@ -113,13 +113,12 @@
     mix-blend-mode: screen;
   }
 
-  /* 🔑 dies BEFORE reaching top → no clipping */
   @keyframes fogRise {
     0%   { transform: translateY(0) scale(1); opacity: 0; }
     20%  { opacity: 0.55; }
-    55%  { opacity: 0.42; transform: translateY(-22px) scale(1.08); }
-    75%  { opacity: 0.18; transform: translateY(-30px) scale(1.16); }
-    100% { opacity: 0;   transform: translateY(-34px) scale(1.2); }
+    55%  { opacity: 0.45; transform: translateY(-26px) scale(1.08); }
+    75%  { opacity: 0.18; transform: translateY(-36px) scale(1.18); }
+    100% { opacity: 0; transform: translateY(-44px) scale(1.25); }
   }
 
   @keyframes flameMove {
