@@ -8,16 +8,18 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
   background: transparent;
 }
 
-/* NOTION SAFE CONTAINER */
+/* NOTION / IFRAME FULL AREA */
 .safe-zone {
-  width: 320px;
-  height: 320px;
+  width: 100%;
+  height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center;   /* vertical center */
+  justify-content: center; /* horizontal center */
 }
 
 /* SUBTLE TINT VARIABLES */
@@ -35,7 +37,6 @@ html, body {
   border-radius: 50%;
   background: transparent;
 
-  /* default calm grey */
   box-shadow:
     inset 0 0 34px rgba(0,0,0,0.9),
     0 0 36px rgba(160,160,160,0.35);
@@ -154,7 +155,7 @@ function getMonthProgressAngle() {
   return (day / days) * 360 - 90;
 }
 
-/* apply monthly state (NO PULSE) */
+/* apply monthly state */
 async function applyMonthlyState() {
   try {
     const res = await fetch("/api/engine?t=" + Date.now());
@@ -200,14 +201,8 @@ async function applyMonthlyState() {
     root.style.setProperty("--hand-main", tints.main);
     root.style.setProperty("--hand-soft", tints.soft);
 
-    localStorage.setItem(
-      "clockVisual",
-      JSON.stringify({ glow, tints })
-    );
-
-  } catch {
-    /* offline → keep last state */
-  }
+    localStorage.setItem("clockVisual", JSON.stringify({ glow, tints }));
+  } catch {}
 }
 
 /* update hands */
@@ -223,7 +218,7 @@ updateClock();
 applyMonthlyState();
 
 setInterval(updateClock, 1000);
-setInterval(applyMonthlyState, 10 * 1000);
+setInterval(applyMonthlyState, 10000);
 </script>
 
 </body>
