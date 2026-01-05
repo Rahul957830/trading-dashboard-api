@@ -38,15 +38,18 @@
       0 0 6px rgba(255,170,60,0.85),
       0 0 14px rgba(255,120,20,0.45);
 
+    /* 🔥 anchor flame at base */
+    transform-origin: 50% 100%;
+
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
-      swayMove var(--swaySpeed) infinite ease-in-out;
+      bendMove var(--bendSpeed) infinite ease-in-out;
 
     animation-delay:
       var(--delay),
       0s,
-      var(--swayDelay);
+      var(--bendDelay);
 
     opacity: 0.95;
   }
@@ -95,9 +98,9 @@
   }
 
   @keyframes flameMove {
-    0%   { transform: scaleY(0.88) translateY(0); }
-    45%  { transform: scaleY(1.08) translateY(-4px); }
-    100% { transform: scaleY(0.92) translateY(0); }
+    0%   { transform: scaleY(0.88); }
+    45%  { transform: scaleY(1.08); }
+    100% { transform: scaleY(0.92); }
   }
 
   @keyframes waveMove {
@@ -106,11 +109,11 @@
     100% { filter: brightness(0.95); }
   }
 
-  /* 🔥 NEW: subtle lateral sway */
-  @keyframes swayMove {
-    0%   { transform: translateX(-2px); }
-    50%  { transform: translateX(2px); }
-    100% { transform: translateX(-2px); }
+  /* 🔥 NEW: bend from middle/top (base fixed) */
+  @keyframes bendMove {
+    0%   { rotate: -1.6deg; }
+    50%  { rotate: 1.6deg; }
+    100% { rotate: -1.6deg; }
   }
 
   @keyframes sparkFly {
@@ -130,7 +133,7 @@
 <script>
   const fire = document.getElementById("fire");
 
-  const flameSpacingPx = 10;
+  const flameSpacingPx = 9; // dense but not wall
   const containerWidth = fire.clientWidth;
   const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
@@ -141,15 +144,14 @@
     const jitter = (Math.random() * 2 - 1);
     f.style.left = `${i * flameSpacingPx + jitter}px`;
 
-    /* vertical rhythm */
-    f.style.setProperty("--speed", `${2.7 + Math.random() * 1.0}s`);
+    f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
     f.style.height = `${52 + Math.random() * 12}%`;
 
-    /* horizontal sway */
-    f.style.setProperty("--swaySpeed", `${6 + Math.random() * 3}s`);
-    f.style.setProperty("--swayDelay", `${Math.random() * 4}s`);
+    /* bending motion */
+    f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
+    f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
 
-    /* wave phase */
+    /* brightness wave phase */
     f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
 
     fire.appendChild(f);
