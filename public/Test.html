@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (with Fog Effect)</title>
+<title>Premium Fire Strip (Fog Enhanced)</title>
 
 <style>
   body {
@@ -95,7 +95,7 @@
     pointer-events: none;
   }
 
-  /* --- FOG --- */
+  /* --- FOG (ENHANCED VISIBILITY) --- */
   .fog {
     position: absolute;
     bottom: 55%;
@@ -103,11 +103,11 @@
     height: 40px;
     background: radial-gradient(
       ellipse at center,
-      rgba(255,255,255,0.18),
-      rgba(255,255,255,0.08),
+      rgba(255,255,255,0.28),
+      rgba(255,255,255,0.12),
       transparent 70%
     );
-    filter: blur(8px);
+    filter: blur(6px);
     opacity: 0;
     border-radius: 50%;
     animation: fogRise 6s ease-in forwards;
@@ -116,9 +116,9 @@
 
   @keyframes fogRise {
     0%   { transform: translateY(0) scale(1); opacity: 0; }
-    20%  { opacity: 0.35; }
-    60%  { opacity: 0.28; transform: translateY(-32px) scale(1.1); }
-    90%  { opacity: 0.15; transform: translateY(-55px) scale(1.25); }
+    20%  { opacity: 0.55; }
+    60%  { opacity: 0.45; transform: translateY(-32px) scale(1.1); }
+    90%  { opacity: 0.25; transform: translateY(-55px) scale(1.25); }
     100% { opacity: 0; transform: translateY(-65px) scale(1.3); }
   }
 
@@ -160,7 +160,7 @@ const flameSpacingPx = 9;
 const containerWidth = fire.clientWidth;
 const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
-/* === FLAMES === */
+/* Flames */
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
   f.className = "flame";
@@ -174,7 +174,7 @@ for (let i = 0; i < flameCount; i++) {
   fire.appendChild(f);
 }
 
-/* === SPARKS === */
+/* Sparks */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -185,17 +185,16 @@ setInterval(() => {
   setTimeout(() => s.remove(), 1900);
 }, 200);
 
-/* === FOG BURSTS === */
+/* Fog bursts */
 setInterval(() => {
   const fog = document.createElement("div");
   fog.className = "fog";
   fog.style.left = `${Math.random() * 80 + 10}%`;
   fog.style.animationDuration = `${5.5 + Math.random() * 2}s`;
   fog.style.width = `${120 + Math.random() * 60}px`;
-  fog.style.opacity = 0.25 + Math.random() * 0.1;
   fire.appendChild(fog);
   setTimeout(() => fog.remove(), 6000);
-}, 5000 + Math.random() * 4000);
+}, 4500 + Math.random() * 3500);
 </script>
 </body>
 </html>
