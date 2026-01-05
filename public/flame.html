@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Fog Enhanced)</title>
+<title>Premium Fire Strip (Transparent Termination)</title>
 
 <style>
   body {
@@ -19,24 +19,7 @@
     background: transparent;
   }
 
-  /* --- VISUAL TERMINATION MASK --- */
-  .termination-mask {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    height: 35%;
-    background: linear-gradient(
-      to bottom,
-      rgba(0,0,0,0.55),
-      rgba(0,0,0,0.25),
-      rgba(0,0,0,0.08),
-      transparent
-    );
-    pointer-events: none;
-    z-index: 10;
-  }
-
-  /* --- FLAMES --- */
+  /* ================= FLAMES ================= */
   .flame {
     position: absolute;
     bottom: 0;
@@ -67,7 +50,7 @@
     opacity: 0.95;
   }
 
-  /* --- BASE GLOW --- */
+  /* ================= BASE GLOW ================= */
   .base-glow {
     position: absolute;
     bottom: 0;
@@ -82,17 +65,34 @@
     pointer-events: none;
   }
 
-  /* --- HEADROOM (TRANSPARENT) --- */
-  .smoke {
+  /* ================= TRUE VISUAL TERMINATION ================= */
+  .termination-mask {
     position: absolute;
     top: 0;
     width: 100%;
-    height: 40%;
-    background: transparent;
+    height: 38%;
     pointer-events: none;
+    z-index: 20;
+
+    /* REAL transparency – no dark overlay */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0,0,0,0.35) 30%,
+      rgba(0,0,0,0.75) 60%,
+      black 100%
+    );
+
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0,0,0,0.35) 30%,
+      rgba(0,0,0,0.75) 60%,
+      black 100%
+    );
   }
 
-  /* --- SPARKS --- */
+  /* ================= SPARKS ================= */
   .spark {
     position: absolute;
     bottom: 50%;
@@ -109,17 +109,17 @@
     pointer-events: none;
   }
 
-  /* --- FOG --- */
+  /* ================= FOG ================= */
   .fog {
     position: absolute;
     bottom: 48%;
-    width: 180px;
-    height: 48px;
+    width: 160px;
+    height: 44px;
     background: radial-gradient(
       ellipse at center,
-      rgba(255,255,255,0.38),
-      rgba(255,255,255,0.18),
-      rgba(255,255,255,0.06),
+      rgba(255,255,255,0.32),
+      rgba(255,255,255,0.14),
+      rgba(255,255,255,0.05),
       transparent 72%
     );
     filter: blur(10px);
@@ -130,14 +130,7 @@
     mix-blend-mode: screen;
   }
 
-  @keyframes fogRise {
-    0%   { transform: translateY(0) scale(1); opacity: 0; }
-    20%  { opacity: 0.55; }
-    55%  { opacity: 0.45; transform: translateY(-26px) scale(1.08); }
-    75%  { opacity: 0.18; transform: translateY(-36px) scale(1.18); }
-    100% { opacity: 0; transform: translateY(-44px) scale(1.25); }
-  }
-
+  /* ================= ANIMATIONS ================= */
   @keyframes flameMove {
     0%   { transform: scaleY(0.88); }
     45%  { transform: scaleY(1.08); }
@@ -160,13 +153,21 @@
     0%   { transform: translateY(0) scaleY(1); opacity: 1; }
     100% { transform: translateY(-38px) scaleY(0.2); opacity: 0; }
   }
+
+  @keyframes fogRise {
+    0%   { transform: translateY(0) scale(1); opacity: 0; }
+    20%  { opacity: 0.55; }
+    55%  { opacity: 0.45; transform: translateY(-26px) scale(1.08); }
+    75%  { opacity: 0.18; transform: translateY(-36px) scale(1.18); }
+    100% { opacity: 0; transform: translateY(-44px) scale(1.25); }
+  }
 </style>
 </head>
 
 <body>
+
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
-  <div class="smoke"></div>
   <div class="termination-mask"></div>
 </div>
 
@@ -200,7 +201,7 @@ setInterval(() => {
   s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
-}, 200);
+}, 260);
 
 /* Fog bursts */
 setInterval(() => {
@@ -213,5 +214,6 @@ setInterval(() => {
   setTimeout(() => fog.remove(), 6000);
 }, 4800 + Math.random() * 3500);
 </script>
+
 </body>
 </html>
