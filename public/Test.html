@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip</title>
+<title>Premium Fire Strip (Taller Flames)</title>
 
 <style>
   body {
@@ -14,7 +14,7 @@
   .fire-strip {
     position: relative;
     width: 100%;
-    height: 66px;
+    height: 100px; /* increased total area slightly */
     padding: 5px 0;
     overflow: hidden;
   }
@@ -23,7 +23,7 @@
     position: absolute;
     bottom: 0;
     width: 6px;
-    height: 58%;
+    height: 80%; /* increased base height */
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -38,7 +38,6 @@
       0 0 6px rgba(255,170,60,0.85),
       0 0 14px rgba(255,120,20,0.45);
 
-    /* 🔥 anchor flame at base */
     transform-origin: 50% 100%;
 
     animation:
@@ -58,11 +57,11 @@
     position: absolute;
     bottom: 0;
     width: 100%;
-    height: 45%;
+    height: 55%; /* expanded to match new flame height */
     background: radial-gradient(
       ellipse at center,
-      rgba(255,180,90,0.85),
-      rgba(255,120,40,0.35),
+      rgba(255,180,90,0.9),
+      rgba(255,120,40,0.4),
       transparent 78%
     );
     pointer-events: none;
@@ -72,10 +71,10 @@
     position: absolute;
     top: 0;
     width: 100%;
-    height: 35%;
+    height: 30%; /* leave headroom at top */
     background: linear-gradient(
       to bottom,
-      rgba(0,0,0,0.32),
+      rgba(0,0,0,0.3),
       transparent
     );
     pointer-events: none;
@@ -98,9 +97,9 @@
   }
 
   @keyframes flameMove {
-    0%   { transform: scaleY(0.88); }
-    45%  { transform: scaleY(1.08); }
-    100% { transform: scaleY(0.92); }
+    0%   { transform: scaleY(0.9); }
+    45%  { transform: scaleY(1.1); }
+    100% { transform: scaleY(0.94); }
   }
 
   @keyframes waveMove {
@@ -109,7 +108,6 @@
     100% { filter: brightness(0.95); }
   }
 
-  /* 🔥 NEW: bend from middle/top (base fixed) */
   @keyframes bendMove {
     0%   { rotate: -1.6deg; }
     50%  { rotate: 1.6deg; }
@@ -133,7 +131,7 @@
 <script>
   const fire = document.getElementById("fire");
 
-  const flameSpacingPx = 9; // dense but not wall
+  const flameSpacingPx = 9;
   const containerWidth = fire.clientWidth;
   const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
@@ -145,19 +143,16 @@
     f.style.left = `${i * flameSpacingPx + jitter}px`;
 
     f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-    f.style.height = `${52 + Math.random() * 12}%`;
+    f.style.height = `${70 + Math.random() * 20}%`; // taller flames
 
-    /* bending motion */
     f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
     f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
 
-    /* brightness wave phase */
     f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
 
     fire.appendChild(f);
   }
 
-  /* sparks */
   setInterval(() => {
     const s = document.createElement("div");
     s.className = "spark";
