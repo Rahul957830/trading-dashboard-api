@@ -2,144 +2,152 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Dancing Flame</title>
+<title>Premium Fire Strip</title>
 
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  overflow: hidden;
-}
+  body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+  }
 
-.container {
-  width: 120px;
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  .fire-strip {
+    position: relative;
+    width: 100%;
+    height: 66px;
+    padding: 5px 0;
+    overflow: hidden;
+  }
 
-canvas {
-  background: transparent;
-  display: block;
-}
+  .flame {
+    position: absolute;
+    bottom: 0;
+    width: 6px;
+    height: 58%;
+    border-radius: 50% 50% 45% 45%;
+    background: linear-gradient(
+      to top,
+      #fff2cc 0%,
+      #ffd27d 25%,
+      #ff9a1f 55%,
+      #ff6a00 75%,
+      transparent 100%
+    );
+    filter: blur(0.6px);
+    box-shadow:
+      0 0 6px rgba(255,170,60,0.85),
+      0 0 14px rgba(255,120,20,0.45);
+    animation:
+      flameMove var(--speed) infinite ease-in-out,
+      waveMove 10s infinite ease-in-out;
+    animation-delay: var(--delay);
+    opacity: 0.95;
+  }
+
+  .base-glow {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 45%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255,180,90,0.85),
+      rgba(255,120,40,0.35),
+      transparent 78%
+    );
+    pointer-events: none;
+  }
+
+  .smoke {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 35%;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.32),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  .spark {
+    position: absolute;
+    bottom: 36%;
+    width: 2px;
+    height: var(--h);
+    background: linear-gradient(
+      to top,
+      rgba(255,220,150,var(--o)),
+      rgba(255,180,90,0.55),
+      transparent
+    );
+    border-radius: 50%;
+    animation: sparkFly 1.9s ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes flameMove {
+    0%   { transform: scaleY(0.88) translateY(0); }
+    45%  { transform: scaleY(1.08) translateY(-4px); }
+    100% { transform: scaleY(0.92) translateY(0); }
+  }
+
+  @keyframes waveMove {
+    0%   { filter: brightness(0.95); }
+    50%  { filter: brightness(1.05); }
+    100% { filter: brightness(0.95); }
+  }
+
+  @keyframes sparkFly {
+    0%   { transform: translateY(0) scaleY(1); opacity: 1; }
+    100% { transform: translateY(-30px) scaleY(0.2); opacity: 0; }
+  }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <canvas id="flame" width="120" height="180"></canvas>
+
+<div class="fire-strip" id="fire">
+  <div class="base-glow"></div>
+  <div class="smoke"></div>
 </div>
 
 <script>
-const canvas = document.getElementById("flame");
-const ctx = canvas.getContext("2d");
+  const fire = document.getElementById("fire");
 
-const C = { x: canvas.width / 2, y: canvas.height - 20 };
+  /* 🔥 DENSITY CONTROL (PIXEL-BASED) */
+  const flameSpacingPx = 13; // lower = denser, higher = calmer
+  const containerWidth = fire.clientWidth;
+  const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
-let t = 0;
-let lastTime = performance.now();
+  for (let i = 0; i < flameCount; i++) {
+    const f = document.createElement("div");
+    f.className = "flame";
 
-/* ================= LOOP ================= */
-function render(now) {
-  const dt = Math.min(0.03, (now - lastTime) / 1000);
-  lastTime = now;
-  t += dt;
+    f.style.left = `${i * flameSpacingPx}px`;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    /* micro randomness */
+    f.style.setProperty("--speed", `${2.8 + Math.random() * 0.9}s`);
+    f.style.height = `${52 + Math.random() * 10}%`;
 
-  drawFlame(t);
+    /* rhythm wave offset */
+    f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
 
-  requestAnimationFrame(render);
-}
-
-/* ================= FLAME ================= */
-function drawFlame(time) {
-  const sway = Math.sin(time * 1.4) * 8;
-  const breath = (Math.sin(time * 1.1) + 1) * 0.5;
-
-  const height = 90 + breath * 14;
-  const width = 26 + breath * 6;
-
-  /* ---- OUTER GLOW ---- */
-  const glowGrad = ctx.createRadialGradient(
-    C.x + sway,
-    C.y - height * 0.6,
-    10,
-    C.x + sway,
-    C.y - height * 0.6,
-    70
-  );
-  glowGrad.addColorStop(0, "rgba(255,170,80,0.35)");
-  glowGrad.addColorStop(1, "rgba(255,170,80,0)");
-
-  ctx.fillStyle = glowGrad;
-  ctx.beginPath();
-  ctx.arc(C.x + sway, C.y - height * 0.6, 70, 0, Math.PI * 2);
-  ctx.fill();
-
-  /* ---- FLAME BODY ---- */
-  ctx.beginPath();
-  ctx.moveTo(C.x + sway, C.y);
-
-  for (let i = 0; i <= 1; i += 0.02) {
-    const wave =
-      Math.sin(i * 8 + time * 3) * (6 - i * 4);
-
-    const x =
-      C.x +
-      sway +
-      wave * (1 - i) +
-      Math.sin(time * 2 + i * 6) * 2;
-
-    const y =
-      C.y -
-      i * height -
-      Math.sin(time * 2 + i * 10) * 4;
-
-    ctx.lineTo(x + width * (1 - i), y);
+    fire.appendChild(f);
   }
 
-  for (let i = 1; i >= 0; i -= 0.02) {
-    const wave =
-      Math.sin(i * 8 + time * 3) * (6 - i * 4);
-
-    const x =
-      C.x +
-      sway -
-      wave * (1 - i) +
-      Math.sin(time * 2 + i * 6) * 2;
-
-    const y =
-      C.y -
-      i * height -
-      Math.sin(time * 2 + i * 10) * 4;
-
-    ctx.lineTo(x - width * (1 - i), y);
-  }
-
-  ctx.closePath();
-
-  const flameGrad = ctx.createLinearGradient(
-    0,
-    C.y - height,
-    0,
-    C.y
-  );
-  flameGrad.addColorStop(0, "rgba(255,255,255,0.9)");
-  flameGrad.addColorStop(0.3, "rgba(255,220,140,0.95)");
-  flameGrad.addColorStop(0.7, "rgba(255,150,60,0.9)");
-  flameGrad.addColorStop(1, "rgba(255,90,20,0.85)");
-
-  ctx.fillStyle = flameGrad;
-  ctx.shadowColor = "rgba(255,160,80,0.9)";
-  ctx.shadowBlur = 18;
-  ctx.fill();
-}
-
-/* ================= START ================= */
-requestAnimationFrame(render);
+  /* spark trails */
+  setInterval(() => {
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.setProperty("--h", `${12 + Math.random() * 10}px`);
+    s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
+    fire.appendChild(s);
+    setTimeout(() => s.remove(), 1900);
+  }, 200);
 </script>
+
 </body>
 </html>
