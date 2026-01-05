@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Premium Fire Strip (Balanced Flames)</title>
+<title>Premium Fire Strip (with Fog Effect)</title>
 
 <style>
   body {
@@ -14,7 +14,7 @@
   .fire-strip {
     position: relative;
     width: 100%;
-    height: 85px; /* tighter total height */
+    height: 85px;
     overflow: hidden;
   }
 
@@ -23,7 +23,7 @@
     position: absolute;
     bottom: 0;
     width: 6px;
-    height: 55%; /* shorter flames */
+    height: 55%;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -64,12 +64,12 @@
     pointer-events: none;
   }
 
-  /* --- HEADROOM / SMOKE ZONE --- */
+  /* --- SMOKE / HEADROOM --- */
   .smoke {
     position: absolute;
     top: 0;
     width: 100%;
-    height: 40%; /* taller dark zone for visible sparks */
+    height: 40%;
     background: linear-gradient(
       to bottom,
       rgba(0,0,0,0.35),
@@ -81,7 +81,7 @@
   /* --- SPARKS --- */
   .spark {
     position: absolute;
-    bottom: 50%; /* start above flames */
+    bottom: 50%;
     width: 2px;
     height: var(--h);
     background: linear-gradient(
@@ -93,6 +93,33 @@
     border-radius: 50%;
     animation: sparkFly 1.9s ease-out forwards;
     pointer-events: none;
+  }
+
+  /* --- FOG --- */
+  .fog {
+    position: absolute;
+    bottom: 55%;
+    width: 160px;
+    height: 40px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255,255,255,0.18),
+      rgba(255,255,255,0.08),
+      transparent 70%
+    );
+    filter: blur(8px);
+    opacity: 0;
+    border-radius: 50%;
+    animation: fogRise 6s ease-in forwards;
+    pointer-events: none;
+  }
+
+  @keyframes fogRise {
+    0%   { transform: translateY(0) scale(1); opacity: 0; }
+    20%  { opacity: 0.35; }
+    60%  { opacity: 0.28; transform: translateY(-32px) scale(1.1); }
+    90%  { opacity: 0.15; transform: translateY(-55px) scale(1.25); }
+    100% { opacity: 0; transform: translateY(-65px) scale(1.3); }
   }
 
   @keyframes flameMove {
@@ -133,23 +160,21 @@ const flameSpacingPx = 9;
 const containerWidth = fire.clientWidth;
 const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
+/* === FLAMES === */
 for (let i = 0; i < flameCount; i++) {
   const f = document.createElement("div");
   f.className = "flame";
-
   const jitter = (Math.random() * 2 - 1);
   f.style.left = `${i * flameSpacingPx + jitter}px`;
-
   f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  f.style.height = `${48 + Math.random() * 10}%`; // shorter flames
+  f.style.height = `${48 + Math.random() * 10}%`;
   f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
   f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
   f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
-
   fire.appendChild(f);
 }
 
-/* Sparks rise cleanly in headroom */
+/* === SPARKS === */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -159,6 +184,18 @@ setInterval(() => {
   fire.appendChild(s);
   setTimeout(() => s.remove(), 1900);
 }, 200);
+
+/* === FOG BURSTS === */
+setInterval(() => {
+  const fog = document.createElement("div");
+  fog.className = "fog";
+  fog.style.left = `${Math.random() * 80 + 10}%`;
+  fog.style.animationDuration = `${5.5 + Math.random() * 2}s`;
+  fog.style.width = `${120 + Math.random() * 60}px`;
+  fog.style.opacity = 0.25 + Math.random() * 0.1;
+  fire.appendChild(fog);
+  setTimeout(() => fog.remove(), 6000);
+}, 5000 + Math.random() * 4000);
 </script>
 </body>
 </html>
