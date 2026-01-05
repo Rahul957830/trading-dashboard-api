@@ -116,8 +116,8 @@
 <script>
   const fire = document.getElementById("fire");
 
-  /* 🔥 DENSITY CONTROL (PIXEL-BASED) */
-  const flameSpacingPx = 13; // lower = denser, higher = calmer
+  /* 🔥 DENSITY CONTROL */
+  const flameSpacingPx = 10; // 🔥 denser than before, still elegant
   const containerWidth = fire.clientWidth;
   const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
@@ -125,11 +125,13 @@
     const f = document.createElement("div");
     f.className = "flame";
 
-    f.style.left = `${i * flameSpacingPx}px`;
+    // slight horizontal jitter to avoid wall effect
+    const jitter = (Math.random() * 2 - 1); // -1px to +1px
+    f.style.left = `${i * flameSpacingPx + jitter}px`;
 
     /* micro randomness */
-    f.style.setProperty("--speed", `${2.8 + Math.random() * 0.9}s`);
-    f.style.height = `${52 + Math.random() * 10}%`;
+    f.style.setProperty("--speed", `${2.7 + Math.random() * 1.0}s`);
+    f.style.height = `${52 + Math.random() * 12}%`;
 
     /* rhythm wave offset */
     f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
