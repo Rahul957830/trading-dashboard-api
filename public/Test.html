@@ -81,21 +81,21 @@
     pointer-events: none;
   }
 
-  /* 🔥 NEW: combustion fog wisp */
+  /* 🔥 DENSER COMBUSTION FOG */
   .fog-wisp {
     position: absolute;
-    bottom: 60%;
-    width: 80px;
-    height: 24px;
+    bottom: 58%;
+    width: 140px;
+    height: 42px;
     background: radial-gradient(
       ellipse at center,
-      rgba(120,120,120,0.25),
-      rgba(120,120,120,0.15),
+      rgba(180,160,140,0.45),
+      rgba(160,140,120,0.25),
       transparent 70%
     );
     opacity: 0;
     pointer-events: none;
-    animation: fogRise 5s ease-out forwards;
+    animation: fogRise 6.5s ease-out forwards;
   }
 
   .spark {
@@ -144,10 +144,10 @@
       opacity: 0;
     }
     20% {
-      opacity: 0.35;
+      opacity: 0.55;
     }
     100% {
-      transform: translateY(-22px) scale(1.15);
+      transform: translateY(-28px) scale(1.25);
       opacity: 0;
     }
   }
@@ -188,7 +188,7 @@ for (let i = 0; i < flameCount; i++) {
   fire.appendChild(f);
 }
 
-/* Sparks (reduced frequency) */
+/* Sparks (already reduced) */
 setInterval(() => {
   const s = document.createElement("div");
   s.className = "spark";
@@ -199,15 +199,17 @@ setInterval(() => {
   setTimeout(() => s.remove(), 1900);
 }, 320);
 
-/* 🔥 Combustion fog (episodic, safe) */
+/* 🔥 DENSER FOG — VISIBLE */
 setInterval(() => {
-  const fog = document.createElement("div");
-  fog.className = "fog-wisp";
-  fog.style.left = `${20 + Math.random() * 60}%`;
-  fire.appendChild(fog);
-  setTimeout(() => fog.remove(), 5200);
-}, 12000 + Math.random() * 6000);
+  const fogCount = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < fogCount; i++) {
+    const fog = document.createElement("div");
+    fog.className = "fog-wisp";
+    fog.style.left = `${10 + Math.random() * 80}%`;
+    fire.appendChild(fog);
+    setTimeout(() => fog.remove(), 6500);
+  }
+}, 6500 + Math.random() * 3000);
 </script>
-
 </body>
 </html>
