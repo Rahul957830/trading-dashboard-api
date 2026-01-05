@@ -134,7 +134,7 @@ function Reactor(canvas, baseColor, warningColor) {
 
     /* -------- RING -------- */
     pulse += 0.115;
-    const breathing = 30 + Math.sin(pulse) * 16;
+    const breathing = 40 + Math.sin(pulse) * 16;
 
     let ringColor = baseColor;
     if (state === "WARNING") ringColor = warningColor;
