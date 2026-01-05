@@ -14,7 +14,8 @@
   .fire-strip {
     position: relative;
     width: 100%;
-    height: 85px;
+    height: 66px;
+    padding: 5px 0;
     overflow: hidden;
   }
 
@@ -22,7 +23,7 @@
     position: absolute;
     bottom: 0;
     width: 6px;
-    height: 55%;
+    height: 58%;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
@@ -37,19 +38,20 @@
       0 0 6px rgba(255,170,60,0.85),
       0 0 14px rgba(255,120,20,0.45);
 
+    /* 🔒 anchor at base */
     transform-origin: 50% 100%;
 
     animation:
       flameMove var(--speed) infinite ease-in-out,
       waveMove 10s infinite ease-in-out,
       bendMove var(--bendSpeed) infinite ease-in-out,
-      heatShimmer var(--heatSpeed) infinite linear;
+      heatShimmer var(--heatSpeed) infinite ease-in-out;
 
     animation-delay:
       var(--delay),
       0s,
       var(--bendDelay),
-      var(--heatDelay);
+      0s;
 
     opacity: 0.95;
   }
@@ -58,7 +60,7 @@
     position: absolute;
     bottom: 0;
     width: 100%;
-    height: 50%;
+    height: 45%;
     background: radial-gradient(
       ellipse at center,
       rgba(255,180,90,0.85),
@@ -72,10 +74,10 @@
     position: absolute;
     top: 0;
     width: 100%;
-    height: 40%;
+    height: 35%;
     background: linear-gradient(
       to bottom,
-      rgba(0,0,0,0.35),
+      rgba(0,0,0,0.32),
       transparent
     );
     pointer-events: none;
@@ -83,7 +85,7 @@
 
   .spark {
     position: absolute;
-    bottom: 50%;
+    bottom: 36%;
     width: 2px;
     height: var(--h);
     background: linear-gradient(
@@ -109,69 +111,79 @@
     100% { filter: brightness(0.95); }
   }
 
+  /* gentle bend — base fixed */
   @keyframes bendMove {
     0%   { rotate: -1.4deg; }
     50%  { rotate: 1.4deg; }
     100% { rotate: -1.4deg; }
   }
 
-  /* 🔥 NEW: subtle vertical heat distortion shimmer */
+  /* 🔥 TOP-WEIGHTED HEAT SHIMMER */
   @keyframes heatShimmer {
-    0%   { transform: translateX(0px); }
-    50%  { transform: translateX(0.4px); }
-    100% { transform: translateX(0px); }
+    0% {
+      transform: translateX(0px) skewX(0deg);
+    }
+    50% {
+      transform: translateX(0.6px) skewX(0.6deg);
+    }
+    100% {
+      transform: translateX(0px) skewX(0deg);
+    }
   }
 
   @keyframes sparkFly {
     0%   { transform: translateY(0) scaleY(1); opacity: 1; }
-    100% { transform: translateY(-38px) scaleY(0.2); opacity: 0; }
+    100% { transform: translateY(-30px) scaleY(0.2); opacity: 0; }
   }
 </style>
 </head>
 
 <body>
+
 <div class="fire-strip" id="fire">
   <div class="base-glow"></div>
   <div class="smoke"></div>
 </div>
 
 <script>
-const fire = document.getElementById("fire");
+  const fire = document.getElementById("fire");
 
-const flameSpacingPx = 9;
-const containerWidth = fire.clientWidth;
-const flameCount = Math.floor(containerWidth / flameSpacingPx);
+  const flameSpacingPx = 9; // dense but breathable
+  const containerWidth = fire.clientWidth;
+  const flameCount = Math.floor(containerWidth / flameSpacingPx);
 
-for (let i = 0; i < flameCount; i++) {
-  const f = document.createElement("div");
-  f.className = "flame";
+  for (let i = 0; i < flameCount; i++) {
+    const f = document.createElement("div");
+    f.className = "flame";
 
-  const jitter = (Math.random() * 2 - 1);
-  f.style.left = `${i * flameSpacingPx + jitter}px`;
+    const jitter = (Math.random() * 2 - 1);
+    f.style.left = `${i * flameSpacingPx + jitter}px`;
 
-  f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
-  f.style.height = `${48 + Math.random() * 10}%`;
-  f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
-  f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
-  f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+    f.style.setProperty("--speed", `${2.7 + Math.random() * 0.9}s`);
+    f.style.height = `${52 + Math.random() * 12}%`;
 
-  /* heat shimmer randomness */
-  f.style.setProperty("--heatSpeed", `${3.5 + Math.random() * 2.5}s`);
-  f.style.setProperty("--heatDelay", `${Math.random() * 2}s`);
+    f.style.setProperty("--bendSpeed", `${6.5 + Math.random() * 3}s`);
+    f.style.setProperty("--bendDelay", `${Math.random() * 4}s`);
 
-  fire.appendChild(f);
-}
+    /* 🔥 heat shimmer timing */
+    f.style.setProperty("--heatSpeed", `${4.2 + Math.random() * 2.2}s`);
 
-/* Sparks */
-setInterval(() => {
-  const s = document.createElement("div");
-  s.className = "spark";
-  s.style.left = `${Math.random() * 100}%`;
-  s.style.setProperty("--h", `${10 + Math.random() * 10}px`);
-  s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
-  fire.appendChild(s);
-  setTimeout(() => s.remove(), 1900);
-}, 200);
+    f.style.setProperty("--delay", `${(i / flameCount) * 3}s`);
+
+    fire.appendChild(f);
+  }
+
+  /* sparks */
+  setInterval(() => {
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.setProperty("--h", `${12 + Math.random() * 10}px`);
+    s.style.setProperty("--o", `${0.65 + Math.random() * 0.3}`);
+    fire.appendChild(s);
+    setTimeout(() => s.remove(), 1900);
+  }, 200);
 </script>
+
 </body>
 </html>
