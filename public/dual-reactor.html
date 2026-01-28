@@ -8,6 +8,8 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
   background: transparent;
   overflow: hidden;
 }
@@ -24,8 +26,9 @@ html, body {
 
   position: relative;
   background: rgba(16,16,16,0.96);
-  border-radius: 16px;
-  overflow: hidden;
+
+  /* TEMP: remove rounding until height is confirmed correct */
+  border-radius: 0;
 }
   
 }
