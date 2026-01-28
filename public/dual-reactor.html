@@ -25,9 +25,31 @@ html, body {
   position: relative;
 
 }
+
+.container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+
+  background: radial-gradient(
+    circle at center,
+    rgba(16,16,16,0.85) 0%,
+    rgba(16,16,16,0.92) 60%,
+    rgba(16,16,16,0.98) 100%
+  );
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+  
 canvas {
   background: transparent;
   display: block;
+  position: relative;
+  z-index: 1;
 }
 </style>
 </head>
