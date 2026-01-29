@@ -92,23 +92,24 @@ html, body {
 .clock::after {
   content: "";
   position: absolute;
+  mix-blend-mode: screen;
   inset: -14px;                 /* pushes glow OUTSIDE dial */
   border-radius: 50%;
   pointer-events: none;
 
-  background: radial-gradient(
-    circle at center,
-    rgba(140,255,205,0.18) 0%,
-    rgba(140,255,205,0.12) 42%,
-    rgba(140,255,205,0.06) 58%,
-    rgba(140,255,205,0.00) 72%
-  );
+ background: radial-gradient(
+  circle at center,
+  rgba(140,255,205,0.30) 0%,
+  rgba(140,255,205,0.20) 46%,
+  rgba(140,255,205,0.10) 64%,
+  rgba(140,255,205,0.00) 82%
+);
 
-  filter: blur(10px);           /* diffusion, not blur */
+filter: blur(14px);          /* diffusion, not blur */
   opacity: 0.85;
 
   /* Ultra slow, safe breathing */
-  animation: haloBreath 14s ease-in-out infinite;
+  animation: haloBreath 8s ease-in-out infinite;
 }
 
 /* Hour markers */
@@ -169,9 +170,9 @@ html, body {
 
 /* === Halo breathing === */
 @keyframes haloBreath {
-  0%   { opacity: 0.75; }
-  50%  { opacity: 0.95; }
-  100% { opacity: 0.75; }
+  0%   { opacity: 0.55; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.55; }
 }
 </style>
 </head>
