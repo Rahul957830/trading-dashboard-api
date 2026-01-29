@@ -21,30 +21,36 @@
   min-height: 85px;
 
   overflow: visible;
-  background: rgba(16,16,16,0.98);
+  background: transparent; /* ← important */
   border-radius: 0;
-
-  /* 🔥 FADE-OUT CEILING (THIS IS THE FIX) */
-  -webkit-mask-image: linear-gradient(
-    to top,
-    rgba(0,0,0,1) 0%,
-    rgba(0,0,0,1) 65%,
-    rgba(0,0,0,0) 100%
-  );
-  mask-image: linear-gradient(
-    to top,
-    rgba(0,0,0,1) 0%,
-    rgba(0,0,0,1) 65%,
-    rgba(0,0,0,0) 100%
-  );
 }
 
+/* 🔥 VISUAL BLEND LAYER (reactor-style) */
+.fire-strip::before {
+  content: "";
+  position: absolute;
+  inset: -24px 0 0 0; /* extends upward to avoid hard ceiling */
+
+  background: radial-gradient(
+    ellipse at center bottom,
+    rgba(16,16,16,0.55) 0%,
+    rgba(16,16,16,0.35) 45%,
+    rgba(16,16,16,0.15) 70%,
+    rgba(16,16,16,0.00) 100%
+  );
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+  
   /* --- FLAMES --- */
   .flame {
     position: absolute;
     bottom: 0;
     width: 6px;
     height: 55%;
+    z-index: 1;
     border-radius: 50% 50% 45% 45%;
     background: linear-gradient(
       to top,
