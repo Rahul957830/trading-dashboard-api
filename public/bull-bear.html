@@ -25,74 +25,58 @@ html, body {
   background: rgba(16,16,16,0.98);
 }
 
-/* === IMAGE LAYER (acts like canvas) === */
+/* === IMAGE LAYER (CRISP, UNTOUCHED) === */
 .image-layer {
   position: absolute;
   inset: 0;
 
-  background-image: url("./bull-bear.jpg"); /* adjust name if needed */
+  background-image: url("./bull-bear.jpg"); /* adjust if needed */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 
-  /* Premium tuning */
+  /* Premium but SAFE tuning */
   filter: saturate(1.05) contrast(1.05);
 
-  /* EDGE MELT — removes sharp rectangle */
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    rgba(0,0,0,1) 68%,
-    rgba(0,0,0,0.92) 78%,
-    rgba(0,0,0,0.75) 88%,
-    rgba(0,0,0,0.0) 100%
-  );
-  mask-image: radial-gradient(
-    ellipse at center,
-    rgba(0,0,0,1) 68%,
-    rgba(0,0,0,0.92) 78%,
-    rgba(0,0,0,0.75) 88%,
-    rgba(0,0,0,0.0) 100%
-  );
-
-  box-shadow:
-    inset 0 0 80px rgba(0,0,0,0.45);
+  z-index: 1;
 }
 
-/* === INNER EDGE GLOW + BREATHING PULSE (KEY UPGRADE) === */
-.image-layer::after {
+/* === PREMIUM EDGE SOFTENING + ENERGY (SEPARATE OPTICAL LAYER) === */
+.safe-zone::after {
   content: "";
   position: absolute;
   inset: 0;
 
   background:
-    /* Bull side inner energy */
+    /* Bull energy (left) */
     radial-gradient(
       ellipse at 18% 50%,
-      rgba(90,255,180,0.26),
-      transparent 62%
+      rgba(90,255,180,0.22),
+      transparent 60%
     ),
 
-    /* Bear side inner energy */
+    /* Bear energy (right) */
     radial-gradient(
       ellipse at 82% 50%,
-      rgba(255,140,80,0.28),
-      transparent 62%
+      rgba(255,140,80,0.24),
+      transparent 60%
     ),
 
-    /* Edge depth compression */
+    /* Edge melt (balanced — NOT top/bottom heavy) */
     radial-gradient(
       ellipse at center,
-      rgba(0,0,0,0.0) 56%,
-      rgba(0,0,0,0.55) 100%
+      rgba(0,0,0,0.0) 62%,
+      rgba(0,0,0,0.38) 100%
     );
 
   pointer-events: none;
+  z-index: 2;
 
   /* Slow reactor-style breathing */
-  animation: energyBreath 9.5s ease-in-out infinite;
+  animation: energyBreath 10s ease-in-out infinite;
 }
 
-/* === SUBTLE ENERGY AURA (behind image, very faint) === */
+/* === ULTRA-SUBTLE BACK AURA (barely visible, depth only) === */
 .safe-zone::before {
   content: "";
   position: absolute;
@@ -101,13 +85,13 @@ html, body {
   background:
     radial-gradient(
       ellipse at 18% 50%,
-      rgba(90,255,180,0.10),
-      transparent 65%
+      rgba(90,255,180,0.08),
+      transparent 70%
     ),
     radial-gradient(
       ellipse at 82% 50%,
-      rgba(255,140,80,0.12),
-      transparent 65%
+      rgba(255,140,80,0.09),
+      transparent 70%
     );
 
   pointer-events: none;
@@ -116,15 +100,9 @@ html, body {
 
 /* === BREATHING ANIMATION === */
 @keyframes energyBreath {
-  0% {
-    opacity: 0.85;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.85;
-  }
+  0%   { opacity: 0.82; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.82; }
 }
 </style>
 </head>
