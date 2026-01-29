@@ -8,6 +8,8 @@
   html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
   background: transparent;
   overflow: hidden;
 }
@@ -15,25 +17,25 @@
  .fire-strip {
   position: relative;
   width: 100%;
-  min-height: 110px;   /* taller so flames breathe */
-  padding-top: 32px;   /* vertical blend space */
+  min-height: 110px;   /* gives vertical breathing room */
+  padding-top: 40px;   /* space for fade */
   overflow: visible;
-  background: rgba(16,16,16,0.98);
+  background: transparent;
 }
-
 /* 🔥 VISUAL BLEND LAYER (reactor-style) */
 .fire-strip::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  top: -40px;
   height: 160px;
 
   background: radial-gradient(
-    ellipse at center,
-    rgba(16,16,16,0.65) 0%,
-    rgba(16,16,16,0.35) 55%,
+    ellipse at center bottom,
+    rgba(16,16,16,0.45) 0%,
+    rgba(16,16,16,0.25) 45%,
+    rgba(16,16,16,0.10) 70%,
     rgba(16,16,16,0.00) 100%
   );
 
