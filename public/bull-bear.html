@@ -14,8 +14,53 @@ html, body {
   overflow: hidden;
 }
 
-/* === IFRAME SAFE ZONE (same philosophy as reactor / clock) === */
-.safe-zone::after {
+/* === IFRAME SAFE ZONE (same base as reactor / clock) === */
+.safe-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  min-width: 360px;
+  overflow: hidden;
+  background: rgba(16,16,16,0.98);
+}
+
+/* === IMAGE LAYER (acts like canvas, NOT overlaid) === */
+.image-layer {
+  position: absolute;
+  inset: 0;
+
+  background-image: url("./bull-bear.jpg"); /* adjust name if needed */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* Slight premium tuning */
+  filter: saturate(1.05) contrast(1.05);
+
+  /* 🔥 EDGE MELT — THIS REMOVES SHARP RECTANGLE */
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    rgba(0,0,0,1) 68%,
+    rgba(0,0,0,0.92) 78%,
+    rgba(0,0,0,0.75) 88%,
+    rgba(0,0,0,0.0) 100%
+  );
+  mask-image: radial-gradient(
+    ellipse at center,
+    rgba(0,0,0,1) 68%,
+    rgba(0,0,0,0.92) 78%,
+    rgba(0,0,0,0.75) 88%,
+    rgba(0,0,0,0.0) 100%
+  );
+
+  /* Optional micro-upgrade: cinematic depth */
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,0.45);
+}
+
+/* === SUBTLE ENERGY AURA (BEHIND IMAGE, NOT ON TOP) === */
+.safe-zone::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -24,75 +69,19 @@ html, body {
     /* Bull energy (left) */
     radial-gradient(
       ellipse at 18% 50%,
-      rgba(90,255,180,0.28),
-      transparent 55%
+      rgba(90,255,180,0.18),
+      transparent 60%
     ),
 
     /* Bear energy (right) */
     radial-gradient(
       ellipse at 82% 50%,
-      rgba(255,140,80,0.32),
-      transparent 55%
-    ),
-
-    /* Stronger edge softener */
-    radial-gradient(
-      circle at center,
-      rgba(0,0,0,0.0) 50%,
-      rgba(0,0,0,0.55) 100%
+      rgba(255,140,80,0.20),
+      transparent 60%
     );
 
   pointer-events: none;
-  z-index: 2;
-}
-
-/* === MICRO DEPTH (optional but recommended) === */
-/* Adds subtle cinematic depth, not a visible overlay */
-.safe-zone::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  background: radial-gradient(
-    circle at center,
-    rgba(0,0,0,0.12),
-    rgba(0,0,0,0.55)
-  );
-
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* === PREMIUM EDGE BLEND (THIS REMOVES SHARP RECTANGLE) === */
-.safe-zone::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  background:
-    /* Bull side (left – green energy) */
-    radial-gradient(
-      ellipse at left center,
-      rgba(80,255,170,0.14),
-      transparent 55%
-    ),
-
-    /* Bear side (right – fire energy) */
-    radial-gradient(
-      ellipse at right center,
-      rgba(255,120,60,0.16),
-      transparent 55%
-    ),
-
-    /* Outer vignette to melt into dashboard */
-    radial-gradient(
-      circle at center,
-      rgba(0,0,0,0.0) 55%,
-      rgba(0,0,0,0.45) 100%
-    );
-
-  pointer-events: none;
-  z-index: 2;
+  z-index: 0;
 }
 </style>
 </head>
