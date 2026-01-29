@@ -14,7 +14,7 @@ html, body {
   overflow: hidden;
 }
 
-/* === IFRAME SAFE ZONE (same base as reactor / clock) === */
+/* === IFRAME SAFE ZONE === */
 .safe-zone {
   position: relative;
   width: 100%;
@@ -25,84 +25,61 @@ html, body {
   background: rgba(16,16,16,0.98);
 }
 
-/* === IMAGE LAYER (CRISP, UNTOUCHED) === */
+/* === IMAGE LAYER (CRISP) === */
 .image-layer {
   position: absolute;
   inset: 0;
 
-  background-image: url("./bull-bear.jpg"); /* adjust if needed */
+  background-image: url("./bull-bear.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 
-  /* Premium but SAFE tuning */
   filter: saturate(1.05) contrast(1.05);
 
   z-index: 1;
 }
 
-/* === PREMIUM EDGE SOFTENING + ENERGY (SEPARATE OPTICAL LAYER) === */
+/* === EDGE RIM GLOW (THIS IS THE KEY FIX) === */
+.image-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  /* Inner rim glow */
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.03), /* micro edge definition */
+    inset 0 0 24px rgba(0,0,0,0.55),        /* depth */
+    inset 24px 0 28px rgba(90,255,180,0.22),/* bull glow (left) */
+    inset -24px 0 28px rgba(255,140,80,0.24);/* bear glow (right) */
+
+  pointer-events: none;
+
+  /* Ultra slow breathing */
+  animation: rimBreath 12s ease-in-out infinite;
+}
+
+/* === SOFT DASHBOARD BLEND (outside image) === */
 .safe-zone::after {
   content: "";
   position: absolute;
   inset: 0;
 
-  background:
-    /* Bull energy (left) */
-    radial-gradient(
-      ellipse at 18% 50%,
-      rgba(90,255,180,0.22),
-      transparent 60%
-    ),
-
-    /* Bear energy (right) */
-    radial-gradient(
-      ellipse at 82% 50%,
-      rgba(255,140,80,0.24),
-      transparent 60%
-    ),
-
-    /* Edge melt (balanced — NOT top/bottom heavy) */
-    radial-gradient(
-      ellipse at center,
-      rgba(0,0,0,0.0) 62%,
-      rgba(0,0,0,0.38) 100%
-    );
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0,0,0,0.0) 65%,
+    rgba(0,0,0,0.35) 100%
+  );
 
   pointer-events: none;
   z-index: 2;
-
-  /* Slow reactor-style breathing */
-  animation: energyBreath 10s ease-in-out infinite;
 }
 
-/* === ULTRA-SUBTLE BACK AURA (barely visible, depth only) === */
-.safe-zone::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  background:
-    radial-gradient(
-      ellipse at 18% 50%,
-      rgba(90,255,180,0.08),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse at 82% 50%,
-      rgba(255,140,80,0.09),
-      transparent 70%
-    );
-
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* === BREATHING ANIMATION === */
-@keyframes energyBreath {
-  0%   { opacity: 0.82; }
+/* === BREATHING === */
+@keyframes rimBreath {
+  0%   { opacity: 0.85; }
   50%  { opacity: 1; }
-  100% { opacity: 0.82; }
+  100% { opacity: 0.85; }
 }
 </style>
 </head>
